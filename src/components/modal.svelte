@@ -1,12 +1,13 @@
 <script>
-	export let modalName;
 	import { showingModal } from "../lib/stores";
+	/** @type {{modalName: any, children?: import('svelte').Snippet<[any]>}} */
+	let { modalName, children } = $props();
 	const closeModal = (_) => ($showingModal = null);
 </script>
 
 <div class="modal" class:showing={$showingModal === modalName}>
-	<button class="closeModalButton" on:click={closeModal}>esc</button>
-	<slot {closeModal} />
+	<button class="closeModalButton" onclick={closeModal}>esc</button>
+	{@render children?.({ closeModal, })}
 </div>
 
 <style lang="scss">

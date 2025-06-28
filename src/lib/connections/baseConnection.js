@@ -4,7 +4,7 @@ import {
 	ConnectionStatusEnum,
 	channelOverrides,
 	makeToast,
-} from "../lib/stores";
+} from "../stores";
 import { get } from "svelte/store";
 
 /**

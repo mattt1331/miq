@@ -95,11 +95,11 @@
 			{/if}
 			<p>
 				{#if $currentConnectionStatus.status === ConnectionStatusEnum.CONNECTED}
-					<button class="green" on:click={$currentConnection.close()}>Connected (tap to disconnect)</button>
+					<button class="green" onclick={$currentConnection.close()}>Connected (tap to disconnect)</button>
 				{:else if $currentConnectionStatus.status === ConnectionStatusEnum.CONNECTING}
-					<button class="yellow" on:click={$currentConnection.close()}>Connecting (tap to stop)</button>
+					<button class="yellow" onclick={$currentConnection.close()}>Connecting (tap to stop)</button>
 				{:else}
-					<button class="red" on:click={newConnection}>Disconnected (tap to connect)</button>
+					<button class="red" onclick={newConnection}>Disconnected (tap to connect)</button>
 				{/if}
 			</p>
 		</div>
@@ -133,9 +133,9 @@
 			</div>
 			<p>
 				{#if $mqttStatus.connected}
-					<button class="green" on:click={disconnect}>Connected (tap to disconnect)</button>
+					<button class="green" onclick={disconnect}>Connected (tap to disconnect)</button>
 				{:else}
-					<button class="red" on:click={connect}>Disconnected (tap to connect)</button>
+					<button class="red" onclick={connect}>Disconnected (tap to connect)</button>
 				{/if}
 			</p>
 		</div>

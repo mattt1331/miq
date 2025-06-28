@@ -1,6 +1,4 @@
 <script>
-	export let scene;
-	export let live = false;
 	import {
 		connectionMode,
 		currentConnectionStatus,
@@ -10,7 +8,8 @@
 	} from "../lib/stores";
 	import MeterCanvas from "./meterCanvas.svelte";
 
-	export let channelOverrideDialogChannel = null;
+	/** @type {{scene: any, live?: boolean, channelOverrideDialogChannel?: any}} */
+	let { scene, live = false, channelOverrideDialogChannel = $bindable(null) } = $props();
 </script>
 
 <div class="scene" class:live>
@@ -41,12 +40,12 @@
 					</h3>
 					<div
 						class="menu"
-						on:click={() => (channelOverrideDialogChannel = i)}
-						on:keypress={() => (channelOverrideDialogChannel = i)}
+						onclick={() => (channelOverrideDialogChannel = i)}
+						onkeypress={() => (channelOverrideDialogChannel = i)}
 						role="button"
 						tabindex="0"
 					>
-						<box-icon name="dots-vertical-rounded" color="currentColor" size="1.25em" />
+						<box-icon name="dots-vertical-rounded" color="currentColor" size="1.25em"></box-icon>
 					</div>
 					<div>
 						<p

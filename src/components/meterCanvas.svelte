@@ -1,16 +1,19 @@
 <script>
+	import { run } from 'svelte/legacy';
+
 	import { channelMeters, currentConnection } from "../lib/stores";
 	import { onMount } from "svelte";
 
-	export let channel = 20;
-	let canvas;
-	let ctx;
+	/** @type {{channel?: number}} */
+	let { channel = 20 } = $props();
+	let canvas = $state();
+	let ctx = $state();
 
 	let readings = Array(100).fill(0);
 
-	$: enabled = $currentConnection?.constructor?.getCompleteConfig?.()?.liveMetersEnabled;
+	let enabled = $derived($currentConnection?.constructor?.getCompleteConfig?.()?.liveMetersEnabled);
 
-	$: {
+	run(() => {
 		readings.shift();
 		readings.push($channelMeters[channel - 1]);
 		if (ctx) {
@@ -27,7 +30,7 @@
 				ctx.fillRect(i, canvas.height - reading * canvas.height, 1, reading * canvas.height);
 			}
 		}
-	}
+	});
 
 	onMount(() => {
 		ctx = canvas.getContext("2d");
@@ -35,7 +38,7 @@
 	});
 </script>
 
-<canvas bind:this={canvas} height="100" width="100" style:display={enabled ? null : "none"} />
+<canvas bind:this={canvas} height="100" width="100" style:display={enabled ? null : "none"}></canvas>
 
 <style>
 	canvas {

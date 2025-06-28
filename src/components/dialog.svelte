@@ -1,17 +1,26 @@
 <script>
+	import { run, self } from 'svelte/legacy';
+
 	import { createEventDispatcher, onMount } from "svelte";
 	const dispatch = createEventDispatcher();
 
-	export let show = false;
-	export let confirmation = false;
+	/** @type {{show?: boolean, confirmation?: boolean, children?: import('svelte').Snippet, buttons?: import('svelte').Snippet}} */
+	let {
+		show = $bindable(false),
+		confirmation = false,
+		children,
+		buttons
+	} = $props();
 
 	/** @type {HTMLDialogElement} */
-	let dialog;
+	let dialog = $state();
 
-	$: if (dialog) {
-		if (show) dialog.showModal();
-		else dialog.close();
-	}
+	run(() => {
+		if (dialog) {
+			if (show) dialog.showModal();
+			else dialog.close();
+		}
+	});
 
 	onMount(async () => {
 		// polyfill for some slightly older safari versions that we still kinda need to support
@@ -29,10 +38,10 @@
 	});
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog
 	bind:this={dialog}
-	on:close={() => {
+	onclose={() => {
 		if (dialog.returnValue === "confirm")
 			dispatch("confirm"); // when explicitly confirming
 		else dispatch("cancel"); // for any other reason (click out, etc.)
@@ -40,15 +49,15 @@
 		dispatch("close", dialog.returnValue); // always (for resetting content or handling a custom return), DONE LAST
 		dialog.returnValue = "";
 	}}
-	on:click|self={() => dialog.close()}
+	onclick={self(() => dialog.close())}
 >
 	<form method="dialog">
-		<slot />
+		{@render children?.()}
 		<div class="horizPanel">
-			<!-- svelte-ignore a11y-autofocus -->
+			<!-- svelte-ignore a11y_autofocus -->
 			<button autofocus type="submit" formnovalidate>{confirmation ? "Cancel" : "Close"}</button>
 			{#if confirmation}<button type="submit" value="confirm">Confirm</button>{/if}
-			<slot name="buttons" />
+			{@render buttons?.()}
 		</div>
 	</form>
 </dialog>

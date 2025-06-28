@@ -1,6 +1,6 @@
 import osc from "osc-js";
 import { get, writable } from "svelte/store";
-import { makeToast, oscConfig, currentConnectionStatus, ConnectionStatusEnum } from "./stores";
+import { makeToast, oscConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
 import { BaseConnection } from "./baseConnection";
 
 export class OSCConnection extends BaseConnection {

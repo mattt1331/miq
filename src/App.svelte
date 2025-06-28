@@ -1,4 +1,6 @@
 <script>
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { onMount, setContext, tick } from "svelte";
 	import "boxicons";
 
@@ -26,39 +28,23 @@
 	import { configs, sheets, ddp, loadExternalConfig, updateSheet } from "./lib/db";
 	import { connect, disconnect, getCompleteMqttConfig, incomingMessage, mqttClient } from "./lib/mqtt";
 
-	let loading = ["Loading..."];
+	let loading = $state(["Loading..."]);
 
-	let miniMode = false;
+	let miniMode = $state(false);
 	if (localStorage.getItem("miniMode") == 1) miniMode = true;
-	$: localStorage.setItem("miniMode", miniMode ? 1 : 0);
 
-	$: document?.body?.classList?.toggle("miniMode", miniMode);
 
 	/** @type {HTMLDivElement} */
-	let sceneSelector;
+	let sceneSelector = $state();
 
-	let selectedConfig = null;
-	$: selectedConfig = ($configs || []).find((config) => config.id === $selectedConfigId) || {};
+	let selectedConfig = $state(null);
 
 	/** current sheet contents */
-	let data = [];
-	$: data =
-		selectedConfig?.table ||
-		(selectedConfig.sheetId ? $sheets.find((sheet) => sheet.id === selectedConfig.sheetId)?.table : []);
+	let data = $state([]);
 
-	$: console.log({
-		data,
-		selectedConfig,
-		configs: $configs,
-		sheets: $sheets,
-		selectedConfigId: $selectedConfigId,
-	});
 
-	let scenes = [];
+	let scenes = $state([]);
 	let historyState = history.state;
-	$: if (scenes.length && scenes[previewIndex]?.name) {
-		history.replaceState(scenes[previewIndex].name, "");
-	}
 
 	function regenerateScenes(selectedConfig, data) {
 		console.log("regenerating scenes");
@@ -183,23 +169,21 @@
 	}
 
 	/** @type {number | null} */
-	let channelOverrideDialogChannel = null;
+	let channelOverrideDialogChannel = $state(null);
 	const populateChannelOverride = (number) => {
 		if (!$channelOverrides[number]) {
 			$channelOverrides[number] = { disableControl: false, channelNumber: null }; // include form binds
 		}
 	};
 
-	// only want to regenerate when these specific parameters change
-	$: regenerateScenes(selectedConfig, data);
 
 	// when we refresh the data, we want to keep the same scene selected
 	// this will temporarily hold some old scene data until the new scenes list is regenerated as it may take a while
-	let updateData = null;
+	let updateData = $state(null);
 
-	let previewIndex = 0;
-	let currentIndex = -1;
-	let currentIndexConfigId = null;
+	let previewIndex = $state(0);
+	let currentIndex = $state(-1);
+	let currentIndexConfigId = $state(null);
 
 	function fire(index) {
 		currentIndex = index;
@@ -215,16 +199,7 @@
 		$currentConnection?.onFire(scenes[currentIndex]);
 	}
 
-	$: sceneSelector?.querySelectorAll("button")[previewIndex]?.scrollIntoView({
-		behavior: "smooth",
-		block: "center",
-		inline: "center",
-	});
 
-	$: if ($selectedConfigId !== currentIndexConfigId) {
-		currentIndex = -1;
-		currentIndexConfigId = null;
-	}
 
 	function toggleFullscreen() {
 		if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -236,40 +211,55 @@
 		}
 	}
 
-	$: {
-		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus.connected)
-		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
-			let config = $configs?.find((item) => item.id === selectedConfig.id);
-			const sheetId = $sheets?.find((item) => item.id === config.sheetId)?.sheetId;
-			if (sheetId) config = { ...config, sheetId };
-			if (config.table) config = { ...config, table: undefined };
-			console.log("sending config", config);
-			mqttClient.publish(
-				"miq/" + $mqttConfig.topic + "/config",
-				JSON.stringify({ type: "config", data: config }),
-				0,
-				true,
-			);
-			//set will message to clear
+
+
+	let rxActive = $state(false);
+
+
+	onMount((_) => {
+		loading = loading.filter((item) => item !== "Loading...");
+		// check url for linked config
+		try {
+			if (!new URL(window.location).searchParams.has("config")) return;
+			const linkedConfig = JSON.parse(atob(new URL(window.location).searchParams.get("config")));
+			loadExternalConfig("linked", "Linked", linkedConfig);
+		} catch (error) {
+			console.log(error);
+			makeToast("Error loading linked config", error, "error");
 		}
-	}
+	});
 
-	$: {
-		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
-			// send current and preview index
-			mqttClient.publish(
-				"miq/" + $mqttConfig.topic,
-				JSON.stringify({ type: "index", data: { currentIndex, previewIndex } }),
-				0,
-				true,
-			);
+	let debouncingFire = $state(false);
+	run(() => {
+		localStorage.setItem("miniMode", miniMode ? 1 : 0);
+	});
+	run(() => {
+		document?.body?.classList?.toggle("miniMode", miniMode);
+	});
+	run(() => {
+		selectedConfig = ($configs || []).find((config) => config.id === $selectedConfigId) || {};
+	});
+	run(() => {
+		data =
+			selectedConfig?.table ||
+			(selectedConfig.sheetId ? $sheets.find((sheet) => sheet.id === selectedConfig.sheetId)?.table : []);
+	});
+	run(() => {
+		console.log({
+			data,
+			selectedConfig,
+			configs: $configs,
+			sheets: $sheets,
+			selectedConfigId: $selectedConfigId,
+		});
+	});
+	run(() => {
+		if ($selectedConfigId !== currentIndexConfigId) {
+			currentIndex = -1;
+			currentIndexConfigId = null;
 		}
-	}
-
-	let rxActive = false;
-	$: rxActive = $mqttStatus.connected && $mqttConfig.mode == "rx";
-
-	$: {
+	});
+	run(() => {
 		if ($incomingMessage && $mqttStatus.connected && $mqttConfig.mode == "rx") {
 			try {
 				const data = JSON.parse($incomingMessage.payloadString);
@@ -286,22 +276,54 @@
 				console.log(error);
 			}
 		}
-	}
-
-	onMount((_) => {
-		loading = loading.filter((item) => item !== "Loading...");
-		// check url for linked config
-		try {
-			if (!new URL(window.location).searchParams.has("config")) return;
-			const linkedConfig = JSON.parse(atob(new URL(window.location).searchParams.get("config")));
-			loadExternalConfig("linked", "Linked", linkedConfig);
-		} catch (error) {
-			console.log(error);
-			makeToast("Error loading linked config", error, "error");
+	});
+	run(() => {
+		if (scenes.length && scenes[previewIndex]?.name) {
+			history.replaceState(scenes[previewIndex].name, "");
 		}
 	});
-
-	let debouncingFire = false;
+	// only want to regenerate when these specific parameters change
+	run(() => {
+		regenerateScenes(selectedConfig, data);
+	});
+	run(() => {
+		sceneSelector?.querySelectorAll("button")[previewIndex]?.scrollIntoView({
+			behavior: "smooth",
+			block: "center",
+			inline: "center",
+		});
+	});
+	run(() => {
+		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus.connected)
+		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
+			let config = $configs?.find((item) => item.id === selectedConfig.id);
+			const sheetId = $sheets?.find((item) => item.id === config.sheetId)?.sheetId;
+			if (sheetId) config = { ...config, sheetId };
+			if (config.table) config = { ...config, table: undefined };
+			console.log("sending config", config);
+			mqttClient.publish(
+				"miq/" + $mqttConfig.topic + "/config",
+				JSON.stringify({ type: "config", data: config }),
+				0,
+				true,
+			);
+			//set will message to clear
+		}
+	});
+	run(() => {
+		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
+			// send current and preview index
+			mqttClient.publish(
+				"miq/" + $mqttConfig.topic,
+				JSON.stringify({ type: "index", data: { currentIndex, previewIndex } }),
+				0,
+				true,
+			);
+		}
+	});
+	run(() => {
+		rxActive = $mqttStatus.connected && $mqttConfig.mode == "rx";
+	});
 </script>
 
 <svelte:head>
@@ -309,7 +331,7 @@
 </svelte:head>
 
 <svelte:window
-	on:keydown={(e) => {
+	onkeydown={(e) => {
 		if (e.key === "Escape") $showingModal = null;
 		if ($showingModal || channelOverrideDialogChannel !== null) return; // only run on main page
 		if (e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
@@ -324,19 +346,19 @@
 			// setTimeout(() => debouncingFire = false, 1000);
 		}
 	}}
-	on:keyup={(e) => {
+	onkeyup={(e) => {
 		if (e.key === " ") debouncingFire = false;
 	}}
-	on:blur={() => (debouncingFire = false)}
+	onblur={() => (debouncingFire = false)}
 />
 
 <main class:showingModal={$showingModal} inert={$showingModal} class:hideButtons={rxActive && $mqttConfig.rx_preview}>
 	<div class="top">
-		<!-- svelte-ignore a11y-no-noninteractive-element-to-interactive-role -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<h1
 			style="font-weight: 100; opacity: 0.5;"
-			on:click={() => {
+			onclick={() => {
 				if (confirm("Refresh? (connections could be lost)")) {
 					window.location.reload();
 				}
@@ -346,21 +368,21 @@
 			{loading[0] || "miq"}
 		</h1>
 		<div class="horiz" style="height: 100%; padding-block: 4px;">
-			<button on:click={toggleFullscreen}>
+			<button onclick={toggleFullscreen}>
 				<!-- <span class="material-symbols-outlined"> fullscreen </span> -->
-				<box-icon name="fullscreen" color="currentColor" size="1em" />
+				<box-icon name="fullscreen" color="currentColor" size="1em"></box-icon>
 				<br />Fullscreen
 			</button>
-			<button on:click={() => (miniMode = !miniMode)}>
-				<box-icon name="collapse-alt" color="currentColor" size="1em" />
+			<button onclick={() => (miniMode = !miniMode)}>
+				<box-icon name="collapse-alt" color="currentColor" size="1em"></box-icon>
 				<br />Compact
 			</button>
-			<button on:click={(_) => ($showingModal = "settings")}>
-				<box-icon name="cog" color="currentColor" size="1em" />
+			<button onclick={(_) => ($showingModal = "settings")}>
+				<box-icon name="cog" color="currentColor" size="1em"></box-icon>
 				<br />Settings
 			</button>
 			<button
-				on:click={$mqttStatus.connected ? disconnect() : connect()}
+				onclick={$mqttStatus.connected ? disconnect() : connect()}
 				class="connectionButton"
 				style="position: relative;"
 			>
@@ -369,7 +391,7 @@
 				{#if $mqttConfig.host && $mqttConfig.topic}
 					<span style:color={$mqttStatus.connected ? "var(--green)" : "var(--red)"}>
 						<div class="iconlabel">
-							<box-icon name={$mqttStatus.connected ? "wifi" : "wifi-off"} color="currentColor" size="1em" />
+							<box-icon name={$mqttStatus.connected ? "wifi" : "wifi-off"} color="currentColor" size="1em"></box-icon>
 							<strong>
 								{getCompleteMqttConfig($mqttConfig).mode}/{getCompleteMqttConfig($mqttConfig).topic}
 							</strong>
@@ -377,7 +399,7 @@
 					</span>
 				{:else}
 					<div class="iconlabel">
-						<box-icon name="wifi-off" color="currentColor" size="1em" />
+						<box-icon name="wifi-off" color="currentColor" size="1em"></box-icon>
 						no host
 					</div>
 				{/if}
@@ -386,7 +408,7 @@
 				{/if}
 			</button>
 			<button
-				on:click={$currentConnectionStatus.status > 0 ? $currentConnection.close() : newConnection()}
+				onclick={$currentConnectionStatus.status > 0 ? $currentConnection.close() : newConnection()}
 				class="connectionButton"
 				style="position: relative;"
 				style:display={rxActive ? "none" : null}
@@ -411,7 +433,7 @@
 									: "wifi-off"}
 							color="currentColor"
 							size="1em"
-						/>
+						></box-icon>
 						<strong>{$connectionAddress}</strong>
 					</div>
 				</span>
@@ -425,7 +447,7 @@
 			</button>
 			{#if selectedConfig.sheetId && !selectedConfig.table && !rxActive}
 				<button
-					on:click={() => {
+					onclick={() => {
 						updateData = {
 							oldPreviewName: scenes[previewIndex]?.name,
 							oldCurrentName: scenes[currentIndex]?.name,
@@ -433,17 +455,17 @@
 						updateSheet(selectedConfig.sheetId);
 					}}
 				>
-					<box-icon name="refresh" color="currentColor" size="1em" />
+					<box-icon name="refresh" color="currentColor" size="1em"></box-icon>
 					<br />Update
 				</button>
 			{/if}
 			<button
-				on:click={(_) => ($showingModal = "dbConfig")}
+				onclick={(_) => ($showingModal = "dbConfig")}
 				disabled={rxActive}
 				style="white-space: nowrap; text-overflow: ellipses;"
 			>
 				<div class="iconlabel" style="font-size: 0.8em">
-					<box-icon name="data" color="currentColor" size="1em" />Database
+					<box-icon name="data" color="currentColor" size="1em"></box-icon>Database
 				</div>
 				<br />
 				<strong style="font-size: 1.1em; ">
@@ -465,7 +487,7 @@
 		<div
 			class="sceneselector"
 			bind:this={sceneSelector}
-			on:mousewheel={(e) => {
+			onmousewheel={(e) => {
 				if (!e.deltaY || e.shiftKey) return;
 				e.preventDefault(); // stop scrolling in another direction
 				e.currentTarget.scrollLeft += (e.deltaY + e.deltaX) * 0.6;
@@ -481,7 +503,7 @@
 			</div>
 			{#each scenes as scene, i}
 				<button
-					on:click={() => (previewIndex = i)}
+					onclick={() => (previewIndex = i)}
 					class:green={i === previewIndex && i !== currentIndex}
 					class:red={i === currentIndex}
 				>
@@ -489,7 +511,7 @@
 				</button>
 			{/each}
 			<!-- todo: make look not like a cue -->
-			<button on:click={() => (previewIndex = 0)}>&lt;&lt; START</button>
+			<button onclick={() => (previewIndex = 0)}>&lt;&lt; START</button>
 		</div>
 		<div class="sceneview" class:reversed={$appConfig?.flipSceneOrder || false}>
 			<Scene scene={scenes[previewIndex]} bind:channelOverrideDialogChannel />
@@ -498,14 +520,14 @@
 	</div>
 	<div class="buttons">
 		{#if !(rxActive && $mqttConfig.rx_preview)}
-			<button disabled={previewIndex < 1} on:click={(_) => previewIndex--}>Preview backwards</button>
-			<button disabled={previewIndex > scenes.length - 1} on:click={(_) => previewIndex++}>Preview forwards</button>
-			<button disabled={previewIndex === currentIndex + 1} on:click={(_) => (previewIndex = currentIndex + 1)}
+			<button disabled={previewIndex < 1} onclick={(_) => previewIndex--}>Preview backwards</button>
+			<button disabled={previewIndex > scenes.length - 1} onclick={(_) => previewIndex++}>Preview forwards</button>
+			<button disabled={previewIndex === currentIndex + 1} onclick={(_) => (previewIndex = currentIndex + 1)}
 				>Preview reset</button
 			>
 		{/if}
 		{#if !rxActive}
-			<button disabled={previewIndex > scenes.length - 1} class="red" on:click={(_) => fire(previewIndex)}
+			<button disabled={previewIndex > scenes.length - 1} class="red" onclick={(_) => fire(previewIndex)}
 				>Fire next</button
 			>
 		{/if}
@@ -539,7 +561,7 @@
 					type="number"
 					min="1"
 					value={$channelOverrides[channelOverrideDialogChannel].channelNumber}
-					on:change={(e) => {
+					onchange={(e) => {
 						const oldChannelNumber = $channelOverrides[channelOverrideDialogChannel].channelNumber;
 						populateChannelOverride(oldChannelNumber);
 						$channelOverrides[oldChannelNumber].disableControl = false;
@@ -555,12 +577,12 @@
 					}}
 				/>
 				<button
-					on:click|preventDefault={() => {
+					onclick={preventDefault(() => {
 						const oldChannelNumber = $channelOverrides[channelOverrideDialogChannel].channelNumber;
 						populateChannelOverride(oldChannelNumber);
 						$channelOverrides[oldChannelNumber].disableControl = false;
 						$channelOverrides[channelOverrideDialogChannel].channelNumber = null;
-					}}
+					})}
 					title="*will also remove a manually set channel disable on target">clear</button
 				>
 			</div>
