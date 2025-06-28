@@ -1,8 +1,8 @@
 import { get, writable } from "svelte/store";
 import { connectionMode, currentConnection, currentConnectionStatus, oscConfig, msConfig, m7clConfig } from "./stores";
-import { OSCConnection } from "./osc";
-import { MixingStationConnection } from "./mixing-station";
-import { M7CLConnection } from "./m7cl";
+import { OSCConnection } from "./connections/osc";
+import { MixingStationConnection } from "./connections/mixing-station";
+import { M7CLConnection } from "./connections/m7cl";
 
 export const connectors = {
 	osc: OSCConnection,

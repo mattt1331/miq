@@ -15,7 +15,7 @@
 		m7clConfig,
 		appConfig,
 	} from "../lib/stores";
-	import { M7CLConnection } from "../lib/m7cl";
+	import { M7CLConnection } from "../lib/connections/m7cl";
 </script>
 
 <Modal modalName="settings">
@@ -77,7 +77,9 @@
 					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$msConfig.autoReconnect} /></p>
 				</div>
 			{:else if $connectionMode == "m7cl"}
-				<p>Connect to the M7CL over MIDI, and configure it to receive NRPN control change commands.</p>
+				<p>
+					Connect to the M7CL over MIDI, and configure it to receive NRPN control change and parameter change commands.
+				</p>
 				<div class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
 					<p>Default Output ID: <input type="text" bind:value={$m7clConfig.host} /></p>
 					<p>Default Input ID: <input type="text" bind:value={$m7clConfig.inputHost} /></p>

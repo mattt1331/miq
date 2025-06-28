@@ -1,5 +1,3 @@
-import type { M7CLConnection } from "./m7cl.js";
-
 export interface BaseConnectionConfig {
 	resendNum: number;
 	autoReconnect: boolean;
