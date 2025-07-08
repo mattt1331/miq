@@ -1,15 +1,16 @@
 import { get } from "svelte/store";
 import { makeToast, msConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
 import { BaseConnection } from "./baseConnection";
+import type { BaseColor } from "../types";
 
 export class MixingStationConnection extends BaseConnection {
 	static name = "Mixing Station";
 
-	client;
+	client: WebSocket;
 	nameCharacterLimit = 0; // none to start
-	_pingInterval;
+	_pingInterval: ReturnType<typeof setInterval> | undefined;
 
-	colors = {
+	colors: Record<string, number> = {
 		// defaults for sq, will be updated on connect or fallback to random
 		BLACK: 0,
 		RED: 1,
@@ -28,7 +29,7 @@ export class MixingStationConnection extends BaseConnection {
 		const config = MixingStationConnection.getCompleteConfig();
 
 		this.client = new WebSocket(`ws${config.secure ? "s" : ""}://${config.host}:${config.port}/`);
-		if (window) window.msClient = this.client;
+		if (window) (window as any).msClient = this.client;
 
 		this.client.onopen = () => {
 			currentConnectionStatus.set({
@@ -49,7 +50,7 @@ export class MixingStationConnection extends BaseConnection {
 					}
 
 					if (this.nameCharacterLimit === 0)
-						res?.body?.definitions?.[nameTestKey]?.constraints?.forEach((c) => {
+						res?.body?.definitions?.[nameTestKey]?.constraints?.forEach((c: string) => {
 							const trim = "Max length ";
 							if (!c.startsWith(trim)) return;
 							const num = parseInt(c.slice(trim.length));
@@ -60,7 +61,7 @@ export class MixingStationConnection extends BaseConnection {
 
 					if (!this.updatedColors) {
 						console.log(res, res?.body?.definitions?.[colorTestKey]?.definition?.enums);
-						res?.body?.definitions?.[colorTestKey]?.definition?.enums?.forEach((e) => {
+						res?.body?.definitions?.[colorTestKey]?.definition?.enums?.forEach((e: { name: string; id: number }) => {
 							this.colors[e.name.toUpperCase()] = e.id;
 							this.updatedColors = true;
 						});
@@ -98,16 +99,16 @@ export class MixingStationConnection extends BaseConnection {
 			this._pingInterval = setInterval(ping, 28000);
 		};
 		this.client.onclose = () => {
-			if (this._pingInterval) this._pingInterval = clearInterval(this._pingInterval);
+			if (this._pingInterval) clearInterval(this._pingInterval);
 			this._onSocketClose();
 		};
 		this.client.onerror = (event) => {
 			// let onclose handle close
-			if (event?.target?.readyState !== 3) makeToast("Mixing Station WS Error", "", "error");
+			if ((event?.target as WebSocket | undefined)?.readyState !== 3) makeToast("Mixing Station WS Error", "", "error");
 		};
 	}
 
-	_sendMessage(channel, path, value) {
+	private _sendMessage<T>(channel: number, path: string, value: T): void {
 		this.client.send(
 			JSON.stringify({
 				path: `/console/data/set/ch.${channel}.${path}/val`,
@@ -117,7 +118,7 @@ export class MixingStationConnection extends BaseConnection {
 		);
 	}
 
-	_fireChannel(channel, active, name, color) {
+	override _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {
 		channel -= 1; // 0 indexed in api
 
 		if (active !== null) this._sendMessage(channel, "mix.on", active);

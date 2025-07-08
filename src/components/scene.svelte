@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import {
 		connectionMode,
 		currentConnectionStatus,
@@ -6,10 +6,14 @@
 		oscConfig,
 		channelOverrides,
 	} from "../lib/stores";
+	import type { Scene } from "../lib/types";
 	import MeterCanvas from "./meterCanvas.svelte";
 
-	/** @type {{scene: any, live?: boolean, channelOverrideDialogChannel?: any}} */
-	let { scene, live = false, channelOverrideDialogChannel = $bindable(null) } = $props();
+	let {
+		scene,
+		live = false,
+		channelOverrideDialogChannel = $bindable(null),
+	}: { scene: Scene; live?: boolean; channelOverrideDialogChannel?: any } = $props();
 </script>
 
 <div class="scene" class:live>
@@ -21,24 +25,25 @@
 			<span>{scene ? scene.name : "--"}</span>
 		</h2>
 		<div class="channels">
-			{#each Object.keys(scene?.mics || {}) as i}
-				{@const disableControl = $channelOverrides?.[parseInt(i)]?.disableControl}
-				{@const overrideChannelNumber = $channelOverrides?.[parseInt(i)]?.channelNumber}
+			{#each scene?.mics as [i, mic]}
+				{@const disableControl = $channelOverrides?.[i]?.disableControl}
+				{@const overrideChannelNumber = $channelOverrides?.[i]?.channelNumber}
 				<div
 					class="channel"
-					class:accent={scene?.mics[i]?.active}
-					class:dne={!scene?.mics[i]}
+					class:accent={mic?.active}
+					class:dne={!mic}
 					class:meteringEnabled={$connectionMode === "osc" &&
 						$currentConnectionStatus.status === ConnectionStatusEnum.CONNECTED &&
 						$oscConfig.liveMetersEnabled}
-					class:disabled={disableControl || scene?.mics[i]?.character?.startsWith("?")}
+					class:disabled={disableControl || mic?.character?.startsWith("?")}
 				>
 					<MeterCanvas channel={i} />
 					<h3 style="font-weight: 400; text-overflow: clip;">
 						<span style:text-decoration={overrideChannelNumber || disableControl ? "line-through" : null}>{i}</span>
 						{overrideChannelNumber || ""}
 					</h3>
-					<div
+					<!-- fixme: reenable once fixed -->
+					<!-- <div
 						class="menu"
 						onclick={() => (channelOverrideDialogChannel = i)}
 						onkeypress={() => (channelOverrideDialogChannel = i)}
@@ -46,25 +51,25 @@
 						tabindex="0"
 					>
 						<box-icon name="dots-vertical-rounded" color="currentColor" size="1.25em"></box-icon>
-					</div>
+					</div> -->
 					<div>
 						<p
 							class="actorLabel"
-							class:bigLabel={scene?.mics[i]?.character?.startsWith("#")}
-							class:actorChanging={scene?.mics[i]?.switchingFrom}
+							class:bigLabel={mic?.character?.startsWith("#")}
+							class:actorChanging={mic?.switchingFrom}
 							style="z-index: 10;"
 						>
 							<span>
-								{#if scene?.mics[i]?.switchingFrom}
-									{scene?.mics[i]?.switchingFrom || ""}
-									<br /> <strong>&rarr; {scene?.mics[i]?.actor || ""}</strong>
+								{#if mic?.switchingFrom}
+									{mic?.switchingFrom || ""}
+									<br /> <strong>&rarr; {mic?.actor || ""}</strong>
 								{:else}
-									{scene?.mics[i]?.actor || ""}
+									{mic?.actor || ""}
 								{/if}
 							</span>
 						</p>
-						<p class={scene?.mics[i]?.character?.startsWith("#") ? "smallLabel" : "bigLabel"}>
-							{scene?.mics[i]?.character || ""}
+						<p class={mic?.character?.startsWith("#") ? "smallLabel" : "bigLabel"}>
+							{mic?.character || ""}
 						</p>
 					</div>
 				</div>
@@ -125,6 +130,7 @@
 		min-width: 0;
 		overflow: hidden;
 		transition: 120ms;
+		position: relative;
 		> h3,
 		p {
 			white-space: nowrap;
@@ -137,7 +143,6 @@
 		* {
 			z-index: 30;
 		}
-		position: relative;
 	}
 
 	.actorLabel {

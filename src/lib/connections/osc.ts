@@ -1,15 +1,21 @@
-import osc from "osc-js";
-import { get, writable } from "svelte/store";
-import { makeToast, oscConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
+import OSC from "osc-js";
+import { get } from "svelte/store";
+import { channelMeters, makeToast, oscConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
 import { BaseConnection } from "./baseConnection";
+import type { BaseColor } from "../types";
+
+interface OSCMessage {
+	address: string;
+	args: Array<{ buffer: ArrayBuffer }>;
+}
 
 export class OSCConnection extends BaseConnection {
 	static name = "x32-proxy";
 
-	client;
-	liveRequestInterval;
+	client: OSC;
+	liveRequestInterval: ReturnType<typeof setInterval> | undefined;
 
-	colors = {
+	static readonly colors = {
 		BLACK: 0,
 		RED: 1,
 		GREEN: 2,
@@ -26,15 +32,15 @@ export class OSCConnection extends BaseConnection {
 		"MAGENTA INV": 13,
 		"CYAN INV": 14,
 		"WHITE INV": 15,
-	};
+	} as const;
 
 	constructor() {
 		super();
 
 		const config = OSCConnection.getCompleteConfig();
 
-		this.client = new osc({
-			plugin: new osc.WebsocketClientPlugin({
+		this.client = new OSC({
+			plugin: new OSC.WebsocketClientPlugin({
 				host: config.host,
 				port: config.port,
 				secure: config.secure,
@@ -43,7 +49,7 @@ export class OSCConnection extends BaseConnection {
 
 		// if (window) window.oscClient = this.client;
 
-		this.client.on("*", (message) => {
+		this.client.on("/meters/*", (message: OSCMessage) => {
 			console.log(message.address, message.args);
 			if (message.address === "/meters/6") {
 				let meters = new Float32Array(message.args[0].buffer.slice(16));
@@ -61,11 +67,11 @@ export class OSCConnection extends BaseConnection {
 		this.client.on("open", () => {
 			currentConnectionStatus.set({
 				status: ConnectionStatusEnum.CONNECTED,
-				address: this.client.options.plugin.options.host,
+				address: config.host + ":" + config.port,
 			});
 			const liveRequestFunction = () => {
 				if (config.liveMetersEnabled) {
-					this.client.send(new osc.Message("/meters", "/meters/1"));
+					this.client.send(new OSC.Message("/meters", "/meters/1"));
 				}
 			};
 			liveRequestFunction();
@@ -75,8 +81,8 @@ export class OSCConnection extends BaseConnection {
 			this._onSocketClose();
 			clearInterval(this.liveRequestInterval);
 		});
-		this.client.on("error", (e) => {
-			console.error("OSC Error", error);
+		this.client.on("error", (e: Event & { target: WebSocket }) => {
+			console.error("OSC Error", e);
 			// let onclose handle close
 			if (e?.target?.readyState !== 3) {
 				makeToast("OSC Error", "", "error");
@@ -90,11 +96,11 @@ export class OSCConnection extends BaseConnection {
 		// }
 	}
 
-	_fireChannel(channel, active, name, color) {
+	override _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {
 		let ch = (channel < 10 ? "0" : "") + channel;
-		if (active !== null) this.client.send(new osc.Message(`/ch/${ch}/mix/on`, active ? 780 : 0));
-		this.client.send(new osc.Message(`/ch/${ch}/config/name`, name));
-		this.client.send(new osc.Message(`/ch/${ch}/config/color`, this.colors[color]));
+		if (active !== null) this.client.send(new OSC.Message(`/ch/${ch}/mix/on`, active ? 780 : 0));
+		this.client.send(new OSC.Message(`/ch/${ch}/config/name`, name));
+		this.client.send(new OSC.Message(`/ch/${ch}/config/color`, OSCConnection.colors[color]));
 	}
 
 	static getCompleteConfig() {

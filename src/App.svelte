@@ -1,7 +1,7 @@
-<script>
-	import { run, preventDefault } from 'svelte/legacy';
+<script lang="ts">
+	import { run, preventDefault } from "svelte/legacy";
 
-	import { onMount, setContext, tick } from "svelte";
+	import { onMount, tick, untrack } from "svelte";
 	import "boxicons";
 
 	import Scene from "./components/scene.svelte";
@@ -25,172 +25,61 @@
 		channelOverrides,
 	} from "./lib/stores";
 	import { newConnection, connectionAddress, connectors } from "./lib/connectionUtil";
-	import { configs, sheets, ddp, loadExternalConfig, updateSheet } from "./lib/db";
+	import { configs, loadExternalConfig, updateSheet, type Config } from "./lib/db";
 	import { connect, disconnect, getCompleteMqttConfig, incomingMessage, mqttClient } from "./lib/mqtt";
+	import { regenerateScenes } from "./lib/scenes";
 
-	let loading = $state(["Loading..."]);
+	import type { Scene as SceneData } from "./lib/types";
 
-	let miniMode = $state(false);
-	if (localStorage.getItem("miniMode") == 1) miniMode = true;
+	let sceneSelector: HTMLDivElement;
 
+	let selectedConfig = $derived(($configs || []).find((config) => config.id === $selectedConfigId) || null);
 
-	/** @type {HTMLDivElement} */
-	let sceneSelector = $state();
-
-	let selectedConfig = $state(null);
+	onMount(() => {
+		// check url for linked config
+		try {
+			let config = new URL(location.href).searchParams.get("config");
+			if (config) {
+				const linkedConfig = JSON.parse(atob(config));
+				loadExternalConfig("linked", "Linked", linkedConfig);
+			}
+		} catch (error: any) {
+			console.log(error);
+			makeToast("Error loading linked config", error, "error");
+		}
+	});
 
 	/** current sheet contents */
-	let data = $state([]);
+	let table = $derived(selectedConfig?.table || []);
 
-
-	let scenes = $state([]);
-	let historyState = history.state;
-
-	function regenerateScenes(selectedConfig, data) {
-		console.log("regenerating scenes");
-		const config = {
-			notesRow: parseInt(selectedConfig.notesRow ?? ddp.notesRow),
-			namesRow: parseInt(selectedConfig.namesRow ?? ddp.namesRow),
-			flagsRow: parseInt(selectedConfig.flagsRow ?? ddp.flagsRow),
-			micsStartRow: parseInt(selectedConfig.micsStartRow ?? ddp.micsStartRow),
-			micNumsCol: parseInt(selectedConfig.micNumsCol ?? ddp.micNumsCol),
-			actorNamesCol: parseInt(selectedConfig.actorNamesCol ?? ddp.actorNamesCol),
-			scenesStartCol: parseInt(selectedConfig.scenesStartCol ?? ddp.scenesStartCol),
-		};
-		if (data && data.length > 0 && data[0]?.length > 0) {
-			let newScenes = [];
-			let actorMicPairs = {};
-			function generateActorMicPairs(col) {
-				for (let j = config.micsStartRow; j < data.length; j++) {
-					const micNum = parseInt(data[j][col]);
-					if (micNum !== NaN && micNum > 0) {
-						actorMicPairs[micNum] = {
-							row: j,
-							actor: data[j][config.actorNamesCol],
-						};
-					}
-				}
-			}
-			generateActorMicPairs(config.micNumsCol);
-			for (let i = config.scenesStartCol; i < data[0].length; i++) {
-				if (data[config.flagsRow][i].includes("MIC_CHANGE")) {
-					generateActorMicPairs(i);
-					continue;
-				}
-				let mics = {};
-				Object.keys(actorMicPairs).forEach((micNum) => {
-					const pair = actorMicPairs[micNum];
-					const j = pair.row;
-					mics[micNum] = {
-						actor: pair.actor,
-						character: data[j][i],
-						active: data[j][i].trim() !== "" && data[j][i].trim().slice(0, 2) !== "//",
-					};
-				});
-				newScenes.push({
-					notes: data[config.notesRow][i],
-					name: data[config.namesRow][i],
-					mics,
-				});
-			}
-			// backward pass
-			let passMem = {};
-			newScenes.reverse();
-			newScenes.forEach((scene) => {
-				Object.keys(scene.mics).forEach((micNum) => {
-					if (passMem[micNum]?.actor && !scene.mics[micNum].active) {
-						scene.mics[micNum].actor = passMem[micNum].actor;
-					} else {
-						passMem[micNum] = scene.mics[micNum];
-					}
-				});
-			});
-			// forward pass
-			passMem = {};
-			newScenes.reverse();
-			newScenes.forEach((scene) => {
-				Object.keys(scene.mics).forEach((micNum) => {
-					if (
-						passMem[micNum]?.switchingFrom &&
-						!scene.mics[micNum].active &&
-						passMem[micNum]?.switchingFrom !== scene.mics[micNum].actor
-					) {
-						scene.mics[micNum].switchingFrom = passMem[micNum].switchingFrom;
-					} else {
-						passMem[micNum] = { switchingFrom: scene.mics[micNum].actor };
-					}
-				});
-			});
-			scenes = newScenes;
-			window.scenes = scenes;
-
-			// try to restore from history state, first time only
-			if (historyState !== null) {
-				tick().then(() => {
-					const index = scenes.findIndex((scene) => scene.name === historyState);
-					if (index !== -1) previewIndex = index;
-					historyState = null;
-				});
-			}
-
-			// try to keep same position when updating sheet
-			if (updateData !== null) {
-				let newNames = scenes.map((scene) => scene.name);
-
-				/** @param {number} startIndex @param {string} targetString @param {undefined|number} fallback @returns {number} index */
-				function findNewIndex(startIndex, targetString, fallback = undefined) {
-					if (startIndex < 0) return -1;
-					let right = startIndex,
-						left = startIndex;
-					while (left >= 0 || right < newNames.length) {
-						if (right < newNames.length && newNames[right] === targetString) return right;
-						if (left >= 0 && newNames[left] === targetString) return left;
-						right++;
-						left--;
-					}
-					return fallback || startIndex;
-				}
-
-				currentIndex = findNewIndex(
-					currentIndex, // old
-					updateData.oldCurrentName,
-					-1, // don't say we have some random thing fired
-				);
-				previewIndex = findNewIndex(
-					previewIndex, // old
-					updateData.oldPreviewName,
-				);
-
-				updateData = null;
-			}
-		} else {
-			scenes = [];
-		}
-	}
-
-	/** @type {number | null} */
-	let channelOverrideDialogChannel = $state(null);
-	const populateChannelOverride = (number) => {
-		if (!$channelOverrides[number]) {
-			$channelOverrides[number] = { disableControl: false, channelNumber: null }; // include form binds
-		}
-	};
-
-
-	// when we refresh the data, we want to keep the same scene selected
-	// this will temporarily hold some old scene data until the new scenes list is regenerated as it may take a while
-	let updateData = $state(null);
+	let scenes: SceneData[] = $derived((selectedConfig && regenerateScenes(selectedConfig)) || []);
 
 	let previewIndex = $state(0);
 	let currentIndex = $state(-1);
-	let currentIndexConfigId = $state(null);
+	let currentIndexConfigId = $state<Config["id"] | null>(null);
 
-	function fire(index) {
+	$effect(() => {
+		if ($selectedConfigId !== currentIndexConfigId) {
+			currentIndex = -1;
+			currentIndexConfigId = null;
+		}
+	});
+
+	$effect(() => {
+		// todo: only fire on keyboard/button moves, not clicks
+		sceneSelector.querySelector(`button:nth-of-type(${previewIndex + 1})`)?.scrollIntoView({
+			behavior: "smooth",
+			block: "center",
+			inline: "center",
+		});
+	});
+
+	function fire(index: number) {
 		currentIndex = index;
 		currentIndexConfigId = $selectedConfigId;
 		if (index === previewIndex) {
 			previewIndex = index + 1;
-			sceneSelector?.querySelectorAll("button")[index]?.scrollIntoView({
+			sceneSelector.querySelector(`button:nth-of-type(${index + 1})`)?.scrollIntoView({
 				behavior: "smooth",
 				block: "center",
 				inline: "center",
@@ -199,67 +88,98 @@
 		$currentConnection?.onFire(scenes[currentIndex]);
 	}
 
-
-
-	function toggleFullscreen() {
-		if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-			if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-			else document.documentElement.webkitRequestFullscreen();
-		} else if (document.exitFullscreen) {
-			if (document.fullscreenElement) document.exitFullscreen();
-			else document.webkitExitFullscreen();
+	let initialHistoryState = $state(history.state);
+	$effect(() => {
+		scenes; // try to restore from history state, first time only
+		if (initialHistoryState !== null) {
+			tick().then(() => {
+				const index = scenes.findIndex((scene) => scene.name === initialHistoryState);
+				if (index !== -1) {
+					previewIndex = index;
+					initialHistoryState = null;
+				}
+			});
 		}
-	}
-
-
-
-	let rxActive = $state(false);
-
-
-	onMount((_) => {
-		loading = loading.filter((item) => item !== "Loading...");
-		// check url for linked config
-		try {
-			if (!new URL(window.location).searchParams.has("config")) return;
-			const linkedConfig = JSON.parse(atob(new URL(window.location).searchParams.get("config")));
-			loadExternalConfig("linked", "Linked", linkedConfig);
-		} catch (error) {
-			console.log(error);
-			makeToast("Error loading linked config", error, "error");
+	});
+	$effect(() => {
+		if (scenes.length && scenes[previewIndex]?.name) {
+			history.replaceState(scenes[previewIndex].name, "");
 		}
+	});
+
+	// when we refresh the data, we want to keep the same scene selected
+	// this will temporarily hold some old scene data until the new scenes list is regenerated as it may take a while
+	let updateData = $state<{
+		oldPreviewName: string;
+		oldCurrentName: string;
+	} | null>(null); // fixme:
+	$effect(() => {
+		scenes; // trigger this effect when scenes change
+		// try to keep same position when updating sheet
+
+		let data = untrack(() => updateData);
+		if (data !== null) {
+			let newNames = scenes.map((scene) => scene.name);
+
+			function findNewIndex(
+				startIndex: number,
+				targetString: string,
+				fallback: undefined | number = undefined,
+			): number {
+				if (startIndex < 0) return -1;
+				let right = startIndex,
+					left = startIndex;
+				while (left >= 0 || right < newNames.length) {
+					if (right < newNames.length && newNames[right] === targetString) return right;
+					if (left >= 0 && newNames[left] === targetString) return left;
+					right++;
+					left--;
+				}
+				return fallback || startIndex;
+			}
+
+			currentIndex = findNewIndex(
+				untrack(() => currentIndex), // old
+				data.oldCurrentName,
+				-1, // don't say we have some random thing fired
+			);
+			previewIndex = findNewIndex(
+				untrack(() => previewIndex), // old
+				data.oldPreviewName,
+			);
+
+			updateData = null;
+		}
+	});
+
+	$inspect("app", {
+		table,
+		selectedConfig,
+		configs: $configs,
+		selectedConfigId: $selectedConfigId,
+		scenes,
 	});
 
 	let debouncingFire = $state(false);
-	run(() => {
-		localStorage.setItem("miniMode", miniMode ? 1 : 0);
-	});
-	run(() => {
+
+	let miniMode = $state(false);
+	if (localStorage.getItem("miniMode") == "1") miniMode = true;
+	$effect(() => {
+		localStorage.setItem("miniMode", miniMode ? "1" : "0");
 		document?.body?.classList?.toggle("miniMode", miniMode);
 	});
-	run(() => {
-		selectedConfig = ($configs || []).find((config) => config.id === $selectedConfigId) || {};
-	});
-	run(() => {
-		data =
-			selectedConfig?.table ||
-			(selectedConfig.sheetId ? $sheets.find((sheet) => sheet.id === selectedConfig.sheetId)?.table : []);
-	});
-	run(() => {
-		console.log({
-			data,
-			selectedConfig,
-			configs: $configs,
-			sheets: $sheets,
-			selectedConfigId: $selectedConfigId,
-		});
-	});
-	run(() => {
-		if ($selectedConfigId !== currentIndexConfigId) {
-			currentIndex = -1;
-			currentIndexConfigId = null;
+
+	// fixme: currently broken, should be rewritten as $state
+	let channelOverrideDialogChannel = $state<number | null>(null);
+	const populateChannelOverride = (number: number | null | undefined) => {
+		if (typeof number === "number" && !$channelOverrides[number]) {
+			$channelOverrides[number] = { disableControl: false, channelNumber: undefined }; // include form binds
 		}
-	});
-	run(() => {
+	};
+
+	let rxActive = $derived($mqttStatus.connected && $mqttConfig.mode == "rx");
+	// todo: move logic to mqtt file
+	$effect(() => {
 		if ($incomingMessage && $mqttStatus.connected && $mqttConfig.mode == "rx") {
 			try {
 				const data = JSON.parse($incomingMessage.payloadString);
@@ -277,31 +197,15 @@
 			}
 		}
 	});
-	run(() => {
-		if (scenes.length && scenes[previewIndex]?.name) {
-			history.replaceState(scenes[previewIndex].name, "");
-		}
-	});
-	// only want to regenerate when these specific parameters change
-	run(() => {
-		regenerateScenes(selectedConfig, data);
-	});
-	run(() => {
-		sceneSelector?.querySelectorAll("button")[previewIndex]?.scrollIntoView({
-			behavior: "smooth",
-			block: "center",
-			inline: "center",
-		});
-	});
-	run(() => {
+	$effect(() => {
 		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus.connected)
-		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
-			let config = $configs?.find((item) => item.id === selectedConfig.id);
-			const sheetId = $sheets?.find((item) => item.id === config.sheetId)?.sheetId;
-			if (sheetId) config = { ...config, sheetId };
-			if (config.table) config = { ...config, table: undefined };
+		selectedConfig;
+		table;
+
+		let config = $state.snapshot(selectedConfig);
+		if (config && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
 			console.log("sending config", config);
-			mqttClient.publish(
+			mqttClient.send(
 				"miq/" + $mqttConfig.topic + "/config",
 				JSON.stringify({ type: "config", data: config }),
 				0,
@@ -310,19 +214,16 @@
 			//set will message to clear
 		}
 	});
-	run(() => {
+	$effect(() => {
 		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
 			// send current and preview index
-			mqttClient.publish(
+			mqttClient.send(
 				"miq/" + $mqttConfig.topic,
 				JSON.stringify({ type: "index", data: { currentIndex, previewIndex } }),
 				0,
 				true,
 			);
 		}
-	});
-	run(() => {
-		rxActive = $mqttStatus.connected && $mqttConfig.mode == "rx";
 	});
 </script>
 
@@ -335,7 +236,7 @@
 		if (e.key === "Escape") $showingModal = null;
 		if ($showingModal || channelOverrideDialogChannel !== null) return; // only run on main page
 		if (e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
-		document.activeElement.blur();
+		(document.activeElement as HTMLElement | null)?.blur();
 		if (e.key === "ArrowLeft" && previewIndex > 0) previewIndex--;
 		else if (e.key === "ArrowRight" && previewIndex < scenes.length - 1) previewIndex++;
 		else if (e.key === "Home") previewIndex = 0;
@@ -352,7 +253,7 @@
 	onblur={() => (debouncingFire = false)}
 />
 
-<main class:showingModal={$showingModal} inert={$showingModal} class:hideButtons={rxActive && $mqttConfig.rx_preview}>
+<main class:showingModal={$showingModal} inert={!!$showingModal} class:hideButtons={rxActive && $mqttConfig.rx_preview}>
 	<div class="top">
 		<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -365,10 +266,20 @@
 			}}
 			role="button"
 		>
-			{loading[0] || "miq"}
+			miq
 		</h1>
 		<div class="horiz" style="height: 100%; padding-block: 4px;">
-			<button onclick={toggleFullscreen}>
+			<button
+				onclick={() => {
+					if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+						if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+						else (document.documentElement as any).webkitRequestFullscreen();
+					} else {
+						if (document.exitFullscreen) document.exitFullscreen();
+						else (document as any).webkitExitFullscreen();
+					}
+				}}
+			>
 				<!-- <span class="material-symbols-outlined"> fullscreen </span> -->
 				<box-icon name="fullscreen" color="currentColor" size="1em"></box-icon>
 				<br />Fullscreen
@@ -382,7 +293,7 @@
 				<br />Settings
 			</button>
 			<button
-				onclick={$mqttStatus.connected ? disconnect() : connect()}
+				onclick={() => ($mqttStatus.connected ? disconnect() : connect())}
 				class="connectionButton"
 				style="position: relative;"
 			>
@@ -408,7 +319,7 @@
 				{/if}
 			</button>
 			<button
-				onclick={$currentConnectionStatus.status > 0 ? $currentConnection.close() : newConnection()}
+				onclick={() => ($currentConnectionStatus.status > 0 ? $currentConnection?.close() : newConnection())}
 				class="connectionButton"
 				style="position: relative;"
 				style:display={rxActive ? "none" : null}
@@ -445,14 +356,14 @@
 							: "connect"}</span
 				>
 			</button>
-			{#if selectedConfig.sheetId && !selectedConfig.table && !rxActive}
+			{#if selectedConfig && selectedConfig.sheetId && !rxActive}
 				<button
 					onclick={() => {
 						updateData = {
 							oldPreviewName: scenes[previewIndex]?.name,
 							oldCurrentName: scenes[currentIndex]?.name,
 						};
-						updateSheet(selectedConfig.sheetId);
+						updateSheet(selectedConfig.id);
 					}}
 				>
 					<box-icon name="refresh" color="currentColor" size="1em"></box-icon>
@@ -487,7 +398,7 @@
 		<div
 			class="sceneselector"
 			bind:this={sceneSelector}
-			onmousewheel={(e) => {
+			onwheel={(e) => {
 				if (!e.deltaY || e.shiftKey) return;
 				e.preventDefault(); // stop scrolling in another direction
 				e.currentTarget.scrollLeft += (e.deltaY + e.deltaX) * 0.6;
@@ -536,15 +447,16 @@
 
 <Dialog
 	show={channelOverrideDialogChannel !== null}
-	on:close={() => {
+	onclose={() => {
 		channelOverrideDialogChannel = null;
+		$channelOverrides = { ...$channelOverrides }; // todo: trigger reactivity, but shoudl rewrite as sv5 state
 	}}
 >
-	{#if channelOverrideDialogChannel}
-		{#await new Promise((resolve) => {
-			populateChannelOverride(channelOverrideDialogChannel);
-			resolve();
-		}) then}
+	{#await new Promise<void>((resolve) => {
+		channelOverrideDialogChannel && populateChannelOverride(channelOverrideDialogChannel);
+		resolve();
+	}) then}
+		{#if channelOverrideDialogChannel}
 			<h2>Channel {channelOverrideDialogChannel} overrides</h2>
 			<div>
 				<label for="disableControl">Disable control?:</label>
@@ -562,12 +474,15 @@
 					min="1"
 					value={$channelOverrides[channelOverrideDialogChannel].channelNumber}
 					onchange={(e) => {
+						if (channelOverrideDialogChannel === null) return;
 						const oldChannelNumber = $channelOverrides[channelOverrideDialogChannel].channelNumber;
-						populateChannelOverride(oldChannelNumber);
-						$channelOverrides[oldChannelNumber].disableControl = false;
+						if (oldChannelNumber) {
+							populateChannelOverride(oldChannelNumber);
+							$channelOverrides[oldChannelNumber].disableControl = false;
+						}
 
-						const newChannelNumber = parseInt(e.target.value);
-						if (newChannelNumber !== NaN) {
+						const newChannelNumber = parseInt(e.currentTarget.value);
+						if (!Number.isNaN(newChannelNumber)) {
 							populateChannelOverride(newChannelNumber);
 							$channelOverrides[newChannelNumber].disableControl = true;
 						}
@@ -577,19 +492,23 @@
 					}}
 				/>
 				<button
-					onclick={preventDefault(() => {
+					onclick={(e) => {
+						e.preventDefault();
+						if (channelOverrideDialogChannel === null) return;
 						const oldChannelNumber = $channelOverrides[channelOverrideDialogChannel].channelNumber;
-						populateChannelOverride(oldChannelNumber);
-						$channelOverrides[oldChannelNumber].disableControl = false;
-						$channelOverrides[channelOverrideDialogChannel].channelNumber = null;
-					})}
+						if (oldChannelNumber) {
+							populateChannelOverride(oldChannelNumber);
+							$channelOverrides[oldChannelNumber].disableControl = false;
+						}
+						$channelOverrides[channelOverrideDialogChannel].channelNumber = undefined;
+					}}
 					title="*will also remove a manually set channel disable on target">clear</button
 				>
 			</div>
-		{:catch}
-			invalid state
-		{/await}
-	{/if}
+		{/if}
+	{:catch}
+		invalid state
+	{/await}
 </Dialog>
 
 <DbManager />
@@ -677,6 +596,7 @@
 		overflow-y: hidden;
 		overflow-x: auto;
 		// width: 100%;
+		padding-bottom: min(6px, var(--spacing));
 		> * {
 			flex: 0 0 auto;
 			height: 3em;
@@ -688,7 +608,6 @@
 			width: 6px;
 			height: 6px;
 		}
-		padding-bottom: min(6px, var(--spacing));
 		&::-webkit-scrollbar-thumb {
 			background: var(--fg);
 			border-radius: min(6px, var(--rounding));

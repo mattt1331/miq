@@ -1,13 +1,20 @@
-<script>
+<script lang="ts">
+	import type { Snippet } from "svelte";
 	import { showingModal } from "../lib/stores";
-	/** @type {{modalName: any, children?: import('svelte').Snippet<[any]>}} */
-	let { modalName, children } = $props();
-	const closeModal = (_) => ($showingModal = null);
+
+	const closeModal = () => ($showingModal = null);
+	let {
+		modalName,
+		children,
+	}: {
+		modalName: string;
+		children?: Snippet<[{ closeModal: typeof closeModal }]>;
+	} = $props();
 </script>
 
 <div class="modal" class:showing={$showingModal === modalName}>
 	<button class="closeModalButton" onclick={closeModal}>esc</button>
-	{@render children?.({ closeModal, })}
+	{@render children?.({ closeModal })}
 </div>
 
 <style lang="scss">

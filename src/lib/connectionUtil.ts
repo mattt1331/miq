@@ -19,7 +19,7 @@ const updateAddress = () => {
 
 	return connectionAddress.set((config?.host || "") + (config?.port ? `:${config?.port}` : ""));
 };
-export const connectionAddress = writable(null);
+export const connectionAddress = writable<string | null>(null);
 
 // update the probable next address anytime any connection stuff changes
 currentConnectionStatus.subscribe(updateAddress);

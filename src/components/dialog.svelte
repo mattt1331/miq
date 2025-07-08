@@ -1,21 +1,30 @@
-<script>
-	import { run, self } from 'svelte/legacy';
+<script lang="ts">
+	import { onMount, tick, type Snippet } from "svelte";
 
-	import { createEventDispatcher, onMount } from "svelte";
-	const dispatch = createEventDispatcher();
-
-	/** @type {{show?: boolean, confirmation?: boolean, children?: import('svelte').Snippet, buttons?: import('svelte').Snippet}} */
 	let {
 		show = $bindable(false),
 		confirmation = false,
 		children,
-		buttons
+		buttons,
+		onconfirm,
+		oncancel,
+		onclose,
+	}: {
+		show?: boolean;
+		/** false only shows the close button */
+		confirmation?: boolean;
+
+		children?: Snippet;
+		buttons?: Snippet;
+
+		onconfirm?: (prevent: () => void) => void;
+		oncancel?: (prevent: () => void) => void;
+		onclose?: (returnValue: string) => void;
 	} = $props();
 
-	/** @type {HTMLDialogElement} */
-	let dialog = $state();
+	let dialog: HTMLDialogElement;
 
-	run(() => {
+	$effect(() => {
 		if (dialog) {
 			if (show) dialog.showModal();
 			else dialog.close();
@@ -42,14 +51,24 @@
 <dialog
 	bind:this={dialog}
 	onclose={() => {
+		let prevented = false;
+		const prevent = () => {
+			dialog.showModal();
+			prevented = true;
+		};
+
 		if (dialog.returnValue === "confirm")
-			dispatch("confirm"); // when explicitly confirming
-		else dispatch("cancel"); // for any other reason (click out, etc.)
-		show = false;
-		dispatch("close", dialog.returnValue); // always (for resetting content or handling a custom return), DONE LAST
+			onconfirm?.(prevent); // when explicitly confirming
+		else oncancel?.(prevent); // for any other reason (click out, etc.)
+		if (!prevented) {
+			show = false;
+			onclose?.(dialog.returnValue); // always (for resetting content or handling a custom return), DONE LAST
+		}
 		dialog.returnValue = "";
 	}}
-	onclick={self(() => dialog.close())}
+	onclick={(e) => {
+		if (e.target === dialog) dialog.close();
+	}}
 >
 	<form method="dialog">
 		{@render children?.()}
@@ -99,8 +118,11 @@
 		}
 	}
 
-	dialog::backdrop {
-		background: rgba(0, 0, 0, 0.5);
+	// native
+	dialog::backdrop,
+	// pollyfill
+	dialog :global(+ .backdrop) {
+		background-color: rgba(0, 0, 0, 0.5);
 		animation: fade 250ms ease;
 	}
 

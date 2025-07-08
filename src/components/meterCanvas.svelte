@@ -1,19 +1,20 @@
-<script>
-	import { run } from 'svelte/legacy';
-
+<script lang="ts">
+	import type { BaseConnection } from "../lib/connections/baseConnection";
 	import { channelMeters, currentConnection } from "../lib/stores";
 	import { onMount } from "svelte";
 
-	/** @type {{channel?: number}} */
-	let { channel = 20 } = $props();
-	let canvas = $state();
-	let ctx = $state();
+	let { channel = 20 }: { channel?: number } = $props();
+	let canvas: HTMLCanvasElement;
+	let ctx: CanvasRenderingContext2D | null = $state(null);
 
 	let readings = Array(100).fill(0);
 
-	let enabled = $derived($currentConnection?.constructor?.getCompleteConfig?.()?.liveMetersEnabled);
+	let enabled = $derived(
+		// fixme: should be an instance method
+		($currentConnection?.constructor as typeof BaseConnection | undefined)?.getCompleteConfig?.()?.liveMetersEnabled,
+	);
 
-	run(() => {
+	$effect(() => {
 		readings.shift();
 		readings.push($channelMeters[channel - 1]);
 		if (ctx) {
@@ -34,7 +35,7 @@
 
 	onMount(() => {
 		ctx = canvas.getContext("2d");
-		ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+		if (ctx) ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
 	});
 </script>
 

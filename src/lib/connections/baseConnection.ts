@@ -6,44 +6,48 @@ import {
 	makeToast,
 } from "../stores";
 import { get } from "svelte/store";
+import type { BaseColor, BaseConnectionConfig } from "../types";
 
-/**
- * @typedef BaseColor
- * @type {"RED" | "CYAN" | "MAGENTA"}
- * these
- */
-
-export class BaseConnection {
-	static name = null;
+export abstract class BaseConnection {
+	static name: string;
 
 	constructor() {
 		// reset status but keep reconnecting indicator if set
 		currentConnectionStatus.set({ status: ConnectionStatusEnum.CONNECTING, address: null });
 	}
 
-	onFire(scene) {
+	onFire(scene: any): void {
 		if (scene?.mics) {
 			const overrides = get(channelOverrides);
 
-			const sendNum = Math.round(Math.min(Math.max(this.constructor.getCompleteConfig().resendNum || 0, 0), 4)) + 1;
+			const sendNum =
+				Math.round(
+					Math.min(Math.max((this.constructor as typeof BaseConnection).getCompleteConfig().resendNum || 0, 0), 4)
+				) + 1;
 			console.log("sending", sendNum, "times");
 
 			let overrideToast = "";
 
 			for (let sends = 0; sends < sendNum; sends++) {
-				Object.keys(scene.mics).forEach((channel) => {
+				Object.keys(scene.mics).forEach((channel: string) => {
 					let mic = scene.mics[channel];
 					if (mic) {
 						let channelNum = parseInt(channel);
+
+						if (channelNum < 1) {
+							console.warn(`channel ${channelNum} is not a valid channel number`);
+							return;
+						}
 
 						let overrideDisableControl = overrides?.[channelNum]?.disableControl;
 						if (overrideDisableControl) {
 							console.log(`channel ${channelNum} is disabled`);
 							return; // don't mess with this channel as another could be swapped to it and then overwrite
 						}
-
-						let newChannelNum = null;
-						if (overrides?.[channelNum]?.channelNumber > 0) newChannelNum = overrides[channelNum].channelNumber;
+						let newChannelNum: number | null = null;
+						if (overrides?.[channelNum]?.channelNumber && overrides[channelNum].channelNumber > 0) {
+							newChannelNum = overrides[channelNum].channelNumber;
+						}
 						if (mic.active && newChannelNum && newChannelNum != channelNum)
 							overrideToast += `fired #${channelNum} as #${newChannelNum}\n`;
 
@@ -66,15 +70,15 @@ export class BaseConnection {
 
 	/**
 	 * triggered for each channel to update it on fire
-	 * @param {number} channel channel number
-	 * @param {boolean | null} active should be unmuted, null if control disabled
-	 * @param {string} name channel strip name
-	 * @param {BaseColor} color base color id
+	 * @param channel channel number
+	 * @param active should be unmuted, null if control disabled
+	 * @param name channel strip name
+	 * @param color base color id
 	 */
-	_fireChannel(channel, active, name, color) {}
+	protected _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {}
 
-	/** @returns {import('./types').BaseConnectionConfig} */
-	static getCompleteConfig() {
+	/** returns the complete configuration for this connection type */
+	static getCompleteConfig(): BaseConnectionConfig {
 		return {
 			// placeholder values for anything handled in this file across connection types
 			resendNum: 0,
@@ -84,18 +88,17 @@ export class BaseConnection {
 	}
 
 	/** gracefully close, for when the user wants to close it */
-	close(ungraceful = false) {
-		// don't do this for something ungraceful
+	close(ungraceful: boolean = false): void {
 		if (ungraceful !== true) {
 			currentConnection.set(null); // unregister self for handling fires
 			currentConnectionStatus.set({ status: ConnectionStatusEnum.DISCONNECTED, address: null }); // clear state
 		}
 	}
 
-	_onSocketClose() {
+	protected _onSocketClose(): void {
 		// try autoreconnecting if we shouldn't have been disconnected
 		if (get(currentConnection) === this) {
-			const willAutoReconnect = this.constructor.getCompleteConfig().autoReconnect;
+			const willAutoReconnect = (this.constructor as typeof BaseConnection).getCompleteConfig().autoReconnect;
 			makeToast(
 				"Mixer disconnected unexpectedly",
 				willAutoReconnect ? "Auto Reconnect is enabled" : "Auto Reconnect is disabled",
@@ -109,7 +112,7 @@ export class BaseConnection {
 				setTimeout(() => {
 					// recheck incase config changed between now and then
 					if (get(currentConnection) === this) {
-						currentConnection.set(new this.constructor());
+						currentConnection.set(new (this.constructor as new () => BaseConnection)());
 						// makeToast("Mixer Reconnecting", "", "warn"); // don't need to remind every time as light turns yellow and a new disconnect warning appears
 					}
 					// delay to not ddos in case something goes horrifically wrong

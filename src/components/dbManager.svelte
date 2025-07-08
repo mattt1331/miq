@@ -1,112 +1,107 @@
-<script>
-	import { run } from 'svelte/legacy';
+<script lang="ts">
+	import { run } from "svelte/legacy";
 
 	import Modal from "./modal.svelte";
-	import { db, storedConfigs, configs, sheets, updateSheet } from "../lib/db";
+	import {
+		db,
+		storedConfigs,
+		externalConfigs,
+		configs,
+		updateSheet,
+		type Config,
+		type ExternalConfig,
+		type DbConfig,
+	} from "../lib/db";
 	import Papa from "papaparse";
 	import { ddp } from "../lib/db";
 	import { selectedConfigId } from "../lib/stores";
 
 	import "boxicons";
 
-	/** @type {"configs"|"sheets"} */
-	let mode = $state("configs");
-	let editing = $state({});
+	type Edit = Partial<Config & { id: number }>;
+
+	let editing: Partial<Edit> | undefined = $state();
+	$inspect("editing", editing);
 
 	async function addNew() {
-		const newOne = await db[mode].add({ name: "" });
+		// @ts-expect-error
+		const newOne = await db.configs.add({});
 		console.log(newOne);
-		editing = { mode, data: { id: newOne, ...ddp } };
-	}
-
-	async function update(toUpdate) {
-		if (toUpdate.mode && toUpdate.data) {
-			await db[toUpdate.mode].update({ id: toUpdate.data.id }, toUpdate.data);
-		}
+		editing = { id: newOne, ...ddp };
 	}
 
 	async function deleteCurrent() {
-		if (editing?.data?.id) {
-			await db[editing.mode].delete(editing.data.id);
-			// editing = { mode, data: { configs: $storedConfigs, sheets: $sheets }[mode][1] } || {};
+		if (editing?.id) {
+			await db.configs.delete(editing.id);
 			editing = {};
 		}
 	}
 
-	run(() => {
-		update(editing);
-	});
-	// $: editing = {
-	// 	mode,
-	// 	data: { configs: $configs, sheets: $sheets }[mode]?.find(
-	// 		(item) => item.id === editing.data?.id
-	// 	),
-	// };
-
-	run(() => {
-		console.log(editing);
+	$effect(() => {
+		if (editing && editing.id) {
+			db.configs.update(editing.id, $state.snapshot(editing));
+		}
 	});
 
-	run(() => {
-		if (editing.mode != mode) editing = {};
-	});
-
-	let exportedLink = $state("");
-	run(() => {
-		if (editing?.data && editing.mode === "configs") {
+	let exportedLink = $derived.by(() => {
+		if (editing) {
 			// export config as link with base64 encoded json containing google sheet Id
 			try {
-				let config = $storedConfigs.find((item) => item.id === editing.data.id);
-				const sheetId = $sheets.find((item) => item.id === config?.sheetId)?.sheetId;
-				config = { ...config, sheetId };
-				delete config.id;
+				let config = $storedConfigs.find((item) => item.id === editing?.id);
+				const sheetId = config?.sheetId;
+				if (!sheetId) return "";
+
+				let newConfig = { ...(config as Partial<DbConfig>), sheetId };
+
+				delete newConfig.id;
+				delete newConfig.table;
+				delete newConfig.lastFetched;
+
 				const link = new URL(window.location.href);
-				link.searchParams.set("config", btoa(JSON.stringify(config)));
-				exportedLink = link.href;
+				link.searchParams.set("config", btoa(JSON.stringify(newConfig)));
+				return link.href;
 			} catch (error) {
 				console.error(error);
 			}
 		}
+		return "";
 	});
 
 	async function importLinkedConfig() {
-		const linkedConfig = $configs.find((item) => item.id === "linked");
-		if (!linkedConfig) {
-			return;
-		}
-		const sheetId = linkedConfig?.sheetId;
-		delete linkedConfig.sheetId;
-		delete linkedConfig.id;
-		if (linkedConfig.table) delete linkedConfig.table;
-		linkedConfig.name = linkedConfig.name.replace(/^Linked: /, "");
-		// add sheet to sheets
-		const sheet = { sheetId, name: linkedConfig.name };
-		const newSheetId = await db.sheets.add(sheet);
-		// add config to configs
-		await db.configs.add({ ...linkedConfig, sheetId: newSheetId });
-		await new Promise((resolve) => {
-			Papa.parse(`https://docs.google.com/spreadsheets/d/${sheet.sheetId}/export?format=csv`, {
-				download: true,
-				header: false,
-				complete: async function (results) {
-					console.log(results);
-					let data = results.data;
-					db.sheets.update({ id: newSheetId }, { table: data, lastFetched: new Date() });
-					resolve();
-				},
-			});
-		});
+		// fixme:
+		// const linkedConfig: Config = { ...$externalConfigs?.["linked"] };
+		// if (!linkedConfig) {
+		// 	return;
+		// }
+		// const sheetId = linkedConfig?.sheetId;
+		// delete linkedConfig.sheetId;
+		// delete linkedConfig.id;
+		// if (linkedConfig.table) delete linkedConfig.table;
+		// linkedConfig.name = linkedConfig.name?.replace(/^Linked: /, "");
+		// // add sheet to sheets
+		// const sheet = { sheetId, name: linkedConfig.name };
+		// // @ts-expect-error
+		// // add config to configs
+		// await db.configs.add({ ...linkedConfig });
+		// await new Promise<void>((resolve) => {
+		// 	Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${sheet.sheetId}/export?format=csv`, {
+		// 		download: true,
+		// 		header: false,
+		// 		complete: async function (results) {
+		// 			console.log(results);
+		// 			let data = results.data;
+		// 			db.configs.update(newSheetId, { table: data, lastFetched: new Date() });
+		// 			resolve();
+		// 		},
+		// 	});
+		// });
 	}
 </script>
 
-<Modal modalName="dbConfig" >
+<Modal modalName="dbConfig">
 	{#snippet children({ closeModal })}
-		<h1>Database Manager</h1>
+		<h1>Config Manager</h1>
 		<div>
-			<div class="tabber" role="tablist">
-				<button role="tab" aria-selected={mode === "configs"} onclick={() => (mode = "configs")}>Configurations</button>
-				<button role="tab" aria-selected={mode === "sheets"} onclick={() => (mode = "sheets")}>Downloaded Sheets</button>
-			</div>
 			<button onclick={addNew}>Add New</button>
 			{#if $configs.find((item) => item.id === "linked")}
 				<button onclick={importLinkedConfig}>Import Linked Config</button>
@@ -121,17 +116,18 @@
 				role="listbox"
 				tabindex="0"
 			>
-				{#each { configs: $storedConfigs, sheets: $sheets }[mode] || [] as item, i}
+				{#each $storedConfigs || [] as item}
 					<button
 						class="item"
-						class:untitled={item.name === ""}
-						class:selected={editing?.data?.id === item.id}
-						onclick={() => (editing = { mode, data: item })}
+						class:untitled={!item.name}
+						class:selected={editing?.id === item.id}
+						onclick={() => {
+							console.log(item);
+							editing = { ...item };
+						}}
 						ondblclick={() => {
-							if (editing?.mode === "configs") {
-								$selectedConfigId = item.id;
-								closeModal();
-							}
+							$selectedConfigId = item.id;
+							closeModal();
 						}}
 					>
 						{item.name || "Untitled"}
@@ -139,85 +135,75 @@
 				{/each}
 			</div>
 			<div class="itemConfig verti">
-				{#if typeof editing?.data?.id === "number"}
+				{#if editing && editing.id}
 					<p>
-						Name: <input type="text" bind:value={editing.data.name} />
-						{#if editing?.mode === "configs"}
-							<button
-								class="white"
-								onclick={() => {
-									$selectedConfigId = editing.data.id;
-									closeModal();
-								}}>Open Config</button
-							>
-						{/if}
+						Name: <input type="text" bind:value={editing.name} />
+						<button
+							class="white"
+							onclick={() => {
+								$selectedConfigId = editing?.id || null;
+								closeModal();
+							}}>Open Config</button
+						>
 					</p>
-					{#if editing?.mode === "sheets"}
-						<p>
-							Google Sheets ID: <input type="text" placeholder="44 characters" bind:value={editing.data.sheetId} />
-						</p>
-						<p>
-							Last fetched: {editing.data.lastFetched || "Never"}
-							<button
-								onclick={async () => {
-									let record = await updateSheet(editing.data.id);
-									editing = { ...editing, data: record };
-								}}>Fetch Now</button
-							>
-						</p>
-						{#if editing.data.table}
-							<div style="width: 100%; display: flex; overflow: auto;">
-								<table style="flex:1; width: 100%; overflow: auto;">
-									{#each editing.data.table as row}
+					<p>
+						Google Sheets ID: <input type="text" placeholder="44 characters" bind:value={editing.sheetId} />
+					</p>
+					<p>
+						Last fetched: {editing.lastFetched || "Never"}
+						<button
+							onclick={async () => {
+								if (editing?.id) {
+									let record = await updateSheet(editing.id);
+									editing = { ...record };
+								}
+							}}>Fetch Now</button
+						>
+					</p>
+					<p>
+						Notes Row: <input type="number" bind:value={editing.notesRow} />
+					</p>
+					<p>
+						Scene Names Row: <input type="number" bind:value={editing.namesRow} />
+					</p>
+					<p>
+						Flags Row: <input type="number" bind:value={editing.flagsRow} />
+					</p>
+					<p>
+						Mics Start Row: <input type="number" bind:value={editing.micsStartRow} />
+					</p>
+					<p>
+						Actor Names Column: <input type="number" bind:value={editing.actorNamesCol} />
+					</p>
+					<p>
+						Scenes Start Column: <input type="number" bind:value={editing.scenesStartCol} />
+					</p>
+					{#if editing.table}
+						<div style="width: 100%; display: flex; overflow: auto; min-height: 200px;">
+							<table style="flex: 1; width: 100%; overflow: auto;">
+								<tbody>
+									{#each editing.table as row}
 										<tr>
 											{#each row as cell}
 												<td>{cell}</td>
 											{/each}
 										</tr>
 									{/each}
-								</table>
-							</div>
-						{/if}
-					{:else if editing?.mode === "configs"}
-						<p>
-							Google Sheet:
-							<select bind:value={editing.data.sheetId}>
-								{#each $sheets as sheet}
-									<option value={sheet.id} class:untitled={sheet.name === ""}>{sheet.name || "Untitled"}</option>
-								{/each}
-							</select>
-						</p>
-						<p>
-							Notes Row: <input type="number" bind:value={editing.data.notesRow} />
-						</p>
-						<p>
-							Scene Names Row: <input type="number" bind:value={editing.data.namesRow} />
-						</p>
-						<p>
-							Flags Row: <input type="number" bind:value={editing.data.flagsRow} />
-						</p>
-						<p>
-							Mics Start Row: <input type="number" bind:value={editing.data.micsStartRow} />
-						</p>
-						<p>
-							Actor Names Column: <input type="number" bind:value={editing.data.actorNamesCol} />
-						</p>
-						<p>
-							Mic Numbers Column: <input type="number" bind:value={editing.data.micNumsCol} />
-						</p>
-						<p>
-							Scenes Start Column: <input type="number" bind:value={editing.data.scenesStartCol} />
-						</p>
-						<p>
-							<details>
-								<summary>Export as link</summary>
-								<a href={exportedLink} style="word-wrap: break-word;">{exportedLink}</a>
-							</details>
-						</p>
+								</tbody>
+							</table>
+						</div>
 					{/if}
-					<p style="margin-top: 24px;">
+				{/if}
+				{#if editing && editing.id && exportedLink}
+					<details>
+						<summary>Export as link</summary>
+						<a href={exportedLink} style="word-wrap: break-word;">{exportedLink}</a>
+					</details>
+				{/if}
+				{#if editing && editing.id}
+					<div style="margin-top: 24px;">
 						<button class="red" onclick={deleteCurrent}>Delete Entry</button>
-					</p>
+					</div>
 				{/if}
 			</div>
 		</div>
@@ -257,10 +243,14 @@
 		overflow-y: auto;
 		gap: 8px;
 	}
-	td {
-		white-space: nowrap;
-		max-width: 100px;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	table {
+		border-collapse: collapse;
+		td {
+			white-space: nowrap;
+			max-width: 100px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			border: 1px solid var(--fg);
+		}
 	}
 </style>

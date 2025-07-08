@@ -21,3 +21,19 @@ export interface M7CLConfig extends BaseConnectionConfig {
 	inputHost: string;
 	liveMeterPoint: number;
 }
+
+export type BaseColor = "RED" | "CYAN" | "MAGENTA";
+
+export interface MicState {
+	active: boolean;
+	character: string;
+	actor: string;
+	switchingFrom?: string;
+	switchingTo?: string;
+}
+
+export interface Scene {
+	name: string;
+	notes: string;
+	mics: Map<number, MicState>;
+}
