@@ -6,7 +6,7 @@ import {
 	makeToast,
 } from "../stores";
 import { get } from "svelte/store";
-import type { BaseColor, BaseConnectionConfig } from "../types";
+import type { BaseColor, BaseConnectionConfig, Scene } from "../types";
 
 export abstract class BaseConnection {
 	static name: string;
@@ -16,7 +16,7 @@ export abstract class BaseConnection {
 		currentConnectionStatus.set({ status: ConnectionStatusEnum.CONNECTING, address: null });
 	}
 
-	onFire(scene: any): void {
+	onFire(scene: Scene): void {
 		if (scene?.mics) {
 			const overrides = get(channelOverrides);
 
@@ -29,11 +29,8 @@ export abstract class BaseConnection {
 			let overrideToast = "";
 
 			for (let sends = 0; sends < sendNum; sends++) {
-				Object.keys(scene.mics).forEach((channel: string) => {
-					let mic = scene.mics[channel];
+				scene.mics.forEach((mic, channelNum) => {
 					if (mic) {
-						let channelNum = parseInt(channel);
-
 						if (channelNum < 1) {
 							console.warn(`channel ${channelNum} is not a valid channel number`);
 							return;
@@ -75,7 +72,9 @@ export abstract class BaseConnection {
 	 * @param name channel strip name
 	 * @param color base color id
 	 */
-	protected _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {}
+	protected _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {
+		console.warn("BaseConnection._fireChannel not implemented, please override in subclass");
+	}
 
 	/** returns the complete configuration for this connection type */
 	static getCompleteConfig(): BaseConnectionConfig {

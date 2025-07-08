@@ -4,7 +4,7 @@ export interface BaseConnectionConfig {
 	liveMetersEnabled: boolean;
 }
 
-export interface OSCConfig extends BaseConnectionConfig {
+export interface X32Config extends BaseConnectionConfig {
 	host: string;
 	port: number;
 	secure: boolean;
@@ -20,6 +20,11 @@ export interface M7CLConfig extends BaseConnectionConfig {
 	host: string;
 	inputHost: string;
 	liveMeterPoint: number;
+}
+
+export interface WingConfig extends BaseConnectionConfig {
+	host: string;
+	port: number;
 }
 
 export type BaseColor = "RED" | "CYAN" | "MAGENTA";

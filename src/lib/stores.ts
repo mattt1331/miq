@@ -1,8 +1,8 @@
 import { writable, get } from "svelte/store";
 import type { BaseConnection } from "./connections/baseConnection";
-import type { connectors } from "./connectionUtil";
+import { connectors } from "./connections";
 import type { Config } from "./db";
-import type { M7CLConfig, MixingStationConfig, OSCConfig } from "./types";
+import type { M7CLConfig, MixingStationConfig, WingConfig, X32Config } from "./types";
 import type { MqttConfig } from "./mqtt";
 
 export const showingModal = writable<"settings" | "dbConfig" | null>(null);
@@ -24,11 +24,18 @@ export const mqttConfig = localStorageWritable<MqttConfig>("mqttConfig", {
 });
 export const mqttStatus = writable({ connected: false, address: null });
 
-export const connectionMode = localStorageWritable<keyof typeof connectors>("connectionMode", "osc");
+export const connectionMode = localStorageWritable<keyof typeof connectors>("connectionMode", "x32");
+connectionMode.update((mode) => {
+	if (!(mode in connectors)) {
+		return "x32"; // default to x32 if the mode is not valid
+	}
+	return mode;
+});
 
-export const oscConfig = localStorageWritable<Partial<OSCConfig>>("oscConfig", {});
+export const x32Config = localStorageWritable<Partial<X32Config>>("x32Config", {});
 export const msConfig = localStorageWritable<Partial<MixingStationConfig>>("msConfig", {});
 export const m7clConfig = localStorageWritable<Partial<M7CLConfig>>("m7clConfig", {});
+export const wingConfig = localStorageWritable<Partial<WingConfig>>("wingConfig", {});
 
 export const appConfig = localStorageWritable<{ flipSceneOrder?: boolean }>("appConfig", {});
 

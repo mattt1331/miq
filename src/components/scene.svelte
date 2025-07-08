@@ -3,7 +3,7 @@
 		connectionMode,
 		currentConnectionStatus,
 		ConnectionStatusEnum,
-		oscConfig,
+		x32Config,
 		channelOverrides,
 	} from "../lib/stores";
 	import type { Scene } from "../lib/types";
@@ -32,9 +32,6 @@
 					class="channel"
 					class:accent={mic?.active}
 					class:dne={!mic}
-					class:meteringEnabled={$connectionMode === "osc" &&
-						$currentConnectionStatus.status === ConnectionStatusEnum.CONNECTED &&
-						$oscConfig.liveMetersEnabled}
 					class:disabled={disableControl || mic?.character?.startsWith("?")}
 				>
 					<MeterCanvas channel={i} />
@@ -163,10 +160,10 @@
 		}
 	}
 
-	.meteringEnabled .actorLabel.actorChanging {
-		background: #ff04;
-		color: white;
-	}
+	// .meteringEnabled .actorLabel.actorChanging {
+	// 	background: #ff04;
+	// 	color: white;
+	// }
 
 	.bigLabel {
 		font-size: 0.9em;

@@ -1,14 +1,6 @@
 import { get, writable } from "svelte/store";
-import { connectionMode, currentConnection, currentConnectionStatus, oscConfig, msConfig, m7clConfig } from "./stores";
-import { OSCConnection } from "./connections/osc";
-import { MixingStationConnection } from "./connections/mixing-station";
-import { M7CLConnection } from "./connections/m7cl";
-
-export const connectors = {
-	osc: OSCConnection,
-	ms: MixingStationConnection,
-	m7cl: M7CLConnection,
-};
+import { connectionMode, currentConnection, currentConnectionStatus, x32Config, msConfig, m7clConfig } from "./stores";
+import { connectors } from "./connections";
 
 const updateAddress = () => {
 	const currentAddress = get(currentConnectionStatus).address;
@@ -24,7 +16,7 @@ export const connectionAddress = writable<string | null>(null);
 // update the probable next address anytime any connection stuff changes
 currentConnectionStatus.subscribe(updateAddress);
 connectionMode.subscribe(updateAddress);
-oscConfig.subscribe(updateAddress);
+x32Config.subscribe(updateAddress);
 msConfig.subscribe(updateAddress);
 m7clConfig.subscribe(updateAddress);
 

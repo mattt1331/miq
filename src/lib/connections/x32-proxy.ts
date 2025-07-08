@@ -1,6 +1,6 @@
 import OSC from "osc-js";
 import { get } from "svelte/store";
-import { channelMeters, makeToast, oscConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
+import { channelMeters, makeToast, x32Config, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
 import { BaseConnection } from "./baseConnection";
 import type { BaseColor } from "../types";
 
@@ -9,7 +9,7 @@ interface OSCMessage {
 	args: Array<{ buffer: ArrayBuffer }>;
 }
 
-export class OSCConnection extends BaseConnection {
+export class X32Connection extends BaseConnection {
 	static name = "x32-proxy";
 
 	client: OSC;
@@ -37,7 +37,7 @@ export class OSCConnection extends BaseConnection {
 	constructor() {
 		super();
 
-		const config = OSCConnection.getCompleteConfig();
+		const config = X32Connection.getCompleteConfig();
 
 		this.client = new OSC({
 			plugin: new OSC.WebsocketClientPlugin({
@@ -100,11 +100,11 @@ export class OSCConnection extends BaseConnection {
 		let ch = (channel < 10 ? "0" : "") + channel;
 		if (active !== null) this.client.send(new OSC.Message(`/ch/${ch}/mix/on`, active ? 780 : 0));
 		this.client.send(new OSC.Message(`/ch/${ch}/config/name`, name));
-		this.client.send(new OSC.Message(`/ch/${ch}/config/color`, OSCConnection.colors[color]));
+		this.client.send(new OSC.Message(`/ch/${ch}/config/color`, X32Connection.colors[color]));
 	}
 
 	static getCompleteConfig() {
-		const config = get(oscConfig);
+		const config = get(x32Config);
 		return {
 			...BaseConnection.getCompleteConfig(),
 			...config,

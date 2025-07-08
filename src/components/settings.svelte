@@ -4,15 +4,17 @@
 	import { mqttConfig, mqttStatus } from "../lib/stores";
 	import { connect, disconnect } from "../lib/mqtt";
 
-	import { connectors, newConnection } from "../lib/connectionUtil";
+	import { connectors } from "../lib/connections";
+	import { newConnection } from "../lib/connectionUtil";
 	import {
 		connectionMode,
 		currentConnection,
 		currentConnectionStatus,
 		ConnectionStatusEnum,
-		oscConfig,
+		x32Config,
 		msConfig,
 		m7clConfig,
+		wingConfig,
 		appConfig,
 	} from "../lib/stores";
 	import { M7CLConnection } from "../lib/connections/m7cl";
@@ -44,7 +46,7 @@
 				{#if $currentConnectionStatus.status > 0}(disconnect to edit){/if}
 			</p>
 
-			{#if $connectionMode === "osc"}
+			{#if $connectionMode === "x32"}
 				<p>
 					Once <a href="https://www.npmjs.com/package/x32-proxy" target="_blank">x32-proxy</a> is installed, use the
 					following command to start up the proxy server: <br />
@@ -52,12 +54,12 @@
 					then, leaving the settings below blank, tap connect.
 				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" bind:value={$oscConfig.host} /></p>
-					<p>Port: <input type="number" bind:value={$oscConfig.port} /></p>
-					<p>Secure: <input type="checkbox" bind:checked={$oscConfig.secure} /></p>
-					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$oscConfig.resendNum} min="0" max="4" /> times</p>
-					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$oscConfig.liveMetersEnabled} /></p>
-					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$oscConfig.autoReconnect} /></p>
+					<p>Host: <input type="text" bind:value={$x32Config.host} /></p>
+					<p>Port: <input type="number" bind:value={$x32Config.port} /></p>
+					<p>Secure: <input type="checkbox" bind:checked={$x32Config.secure} /></p>
+					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$x32Config.resendNum} min="0" max="4" /> times</p>
+					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$x32Config.liveMetersEnabled} /></p>
+					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$x32Config.autoReconnect} /></p>
 				</fieldset>
 			{:else if $connectionMode === "ms"}
 				<p>
@@ -91,6 +93,15 @@
 							{/each}
 						</select>
 					</p>
+				</fieldset>
+			{:else if $connectionMode === "wing"}
+				<p>todo: instructions</p>
+				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
+					<p>Host: <input type="text" bind:value={$wingConfig.host} /></p>
+					<p>Port: <input type="number" bind:value={$wingConfig.port} /></p>
+					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$wingConfig.resendNum} min="0" max="4" /> times</p>
+					<!-- <p>Enable Live Metering?: <input type="checkbox" bind:checked={$x3wingConfig2Config.liveMetersEnabled} /></p> -->
+					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$wingConfig.autoReconnect} /></p>
 				</fieldset>
 			{/if}
 			<p>

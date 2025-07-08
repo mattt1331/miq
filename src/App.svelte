@@ -24,7 +24,8 @@
 		ConnectionStatusEnum,
 		channelOverrides,
 	} from "./lib/stores";
-	import { newConnection, connectionAddress, connectors } from "./lib/connectionUtil";
+	import { connectors } from "./lib/connections";
+	import { newConnection, connectionAddress } from "./lib/connectionUtil";
 	import { configs, loadExternalConfig, updateSheet, type Config } from "./lib/db";
 	import { connect, disconnect, getCompleteMqttConfig, incomingMessage, mqttClient } from "./lib/mqtt";
 	import { regenerateScenes } from "./lib/scenes";
