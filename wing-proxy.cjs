@@ -1,36 +1,48 @@
 const OSC = require("osc-js");
-const VERBOSE = true;
+const VERBOSE = false;
 
 const args = process.argv.slice(2);
-const host = args[0];
-if (host) {
-	console.log(`Using host: ${host}`);
+const UDP_HOST = args[0];
+if (UDP_HOST) {
+	console.log(`Using host: ${UDP_HOST}`);
 } else {
 	throw console.error("No host provided.");
 }
 
+const WEBSOCKET_PORT = 8080;
+
 let config = {
-	udpClient: {
+	receiver: "udp",
+	udpServer: {
+		host: "0.0.0.0",
 		port: 2223,
-		host,
+		exclusive: false,
+	},
+	udpClient: {
+		host: UDP_HOST,
+		port: 2223,
 	},
 	wsServer: {
 		host: "localhost",
-		port: 8080,
+		port: WEBSOCKET_PORT,
 	},
 };
 
 const osc = new OSC({ plugin: new OSC.BridgePlugin(config) });
 
 if (VERBOSE) {
-	console.log("Verbose is ON. It will print *all* OSC messages, so performance will be degraded.");
-	osc.on("/*", (message) => {
+	console.log("Verbose output is enabled. All messages will be logged.");
+	osc.on("*", (message) => {
 		console.log(message);
 	});
 }
 
 osc.on("open", () => {
 	console.log(`Listening on port ${config.wsServer.port}.`);
+});
+
+osc.on("error", (message) => {
+	console.error(message);
 });
 
 osc.open();

@@ -38,7 +38,7 @@ export function connect() {
 	}
 	const clientID = "miq-" + Math.random().toString(16);
 	mqttClient = new Paho.Client(config.host, config.port, config.basepath, clientID);
-	let willMessage = new Paho.Message(new ArrayBuffer(0));
+	let willMessage = new Paho.Message("{}");
 	willMessage.destinationName = "miq/" + config.topic + "/config";
 	/** @type {Paho.ConnectionOptions} */
 	const connectionOptions: Paho.ConnectionOptions = {
@@ -47,7 +47,7 @@ export function connect() {
 		// onConnectionLost: onDisconnect,
 		useSSL: true,
 		willMessage: willMessage,
-		keepAliveInterval: 5,
+		keepAliveInterval: 10,
 		reconnect: true,
 		// mqttVersion: 3,
 		// uris: ["wss://mq03.cy2.me/mqtt"],

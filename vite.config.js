@@ -5,6 +5,7 @@ import legacy from "@vitejs/plugin-legacy";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+	server: { allowedHosts: ["calum07.zapus-monitor.ts.net"] },
 	plugins: [
 		svelte({
 			preprocess: vitePreprocess(),

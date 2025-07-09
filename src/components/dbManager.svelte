@@ -68,33 +68,32 @@
 	});
 
 	async function importLinkedConfig() {
-		// fixme:
-		// const linkedConfig: Config = { ...$externalConfigs?.["linked"] };
-		// if (!linkedConfig) {
-		// 	return;
-		// }
-		// const sheetId = linkedConfig?.sheetId;
-		// delete linkedConfig.sheetId;
-		// delete linkedConfig.id;
-		// if (linkedConfig.table) delete linkedConfig.table;
-		// linkedConfig.name = linkedConfig.name?.replace(/^Linked: /, "");
-		// // add sheet to sheets
-		// const sheet = { sheetId, name: linkedConfig.name };
-		// // @ts-expect-error
-		// // add config to configs
-		// await db.configs.add({ ...linkedConfig });
-		// await new Promise<void>((resolve) => {
-		// 	Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${sheet.sheetId}/export?format=csv`, {
-		// 		download: true,
-		// 		header: false,
-		// 		complete: async function (results) {
-		// 			console.log(results);
-		// 			let data = results.data;
-		// 			db.configs.update(newSheetId, { table: data, lastFetched: new Date() });
-		// 			resolve();
-		// 		},
-		// 	});
-		// });
+		const linkedConfig: Partial<Config> = { ...$externalConfigs?.["linked"] };
+		if (!linkedConfig) return;
+
+		const sheetId = linkedConfig?.sheetId;
+		if (!sheetId) return;
+
+		delete linkedConfig.id;
+		if (linkedConfig.table) delete linkedConfig.table;
+
+		linkedConfig.name = linkedConfig.name?.replace(/^Linked: /, "");
+
+		// @ts-expect-error
+		const dbId = await db.configs.add({ ...linkedConfig });
+		await new Promise<void>((resolve) => {
+			Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`, {
+				download: true,
+				header: false,
+				complete: async function (results) {
+					console.log(results);
+					let data = results.data;
+					db.configs.update(dbId, { table: data, lastFetched: new Date() });
+					$selectedConfigId = dbId;
+					resolve();
+				},
+			});
+		});
 	}
 </script>
 

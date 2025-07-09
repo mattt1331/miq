@@ -87,8 +87,11 @@ export class WingConnection extends BaseConnection {
 	}
 
 	override _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {
-		let cmnd = `$name='${name.replaceAll("'", "").substring(0, 16)}',col=${WingConnection.colors[color]}`;
-		if (active !== null) cmnd += `,active=${active ? 1 : 0}`;
+		let cmnd =
+			`name='${name.replaceAll("'", "\\'").replaceAll("\\", "/").substring(0, 16)}'` +
+			`,col=${WingConnection.colors[color]}`;
+		if (active !== null) cmnd += `,mute=${active ? 1 : 0}`;
+
 		const message = new OSC.Message(`/ch/${channel}`, cmnd);
 		console.log("Sending message:", message);
 
@@ -102,6 +105,7 @@ export class WingConnection extends BaseConnection {
 			...config,
 			host: config.host || "localhost",
 			port: config.port || 8080,
+			liveMetersEnabled: false, // todo: implement live metering api // config.liveMetersEnabled ?? false,
 		};
 	}
 

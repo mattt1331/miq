@@ -54,8 +54,8 @@
 					then, leaving the settings below blank, tap connect.
 				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" bind:value={$x32Config.host} /></p>
-					<p>Port: <input type="number" bind:value={$x32Config.port} /></p>
+					<p>Host: <input type="text" placeholder="localhost" bind:value={$x32Config.host} /></p>
+					<p>Port: <input type="number" placeholder="8080" bind:value={$x32Config.port} /></p>
 					<p>Secure: <input type="checkbox" bind:checked={$x32Config.secure} /></p>
 					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$x32Config.resendNum} min="0" max="4" /> times</p>
 					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$x32Config.liveMetersEnabled} /></p>
@@ -72,8 +72,8 @@
 					<strong>Then,</strong> leaving the settings below blank, tap connect.
 				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" bind:value={$msConfig.host} /></p>
-					<p>Port: <input type="number" bind:value={$msConfig.port} /></p>
+					<p>Host: <input type="text" placeholder="localhost" bind:value={$msConfig.host} /></p>
+					<p>Port: <input type="number" placeholder="8080" bind:value={$msConfig.port} /></p>
 					<p>Secure: <input type="checkbox" bind:checked={$msConfig.secure} /></p>
 					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$msConfig.resendNum} min="0" max="4" /> times</p>
 					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$msConfig.autoReconnect} /></p>
@@ -95,10 +95,13 @@
 					</p>
 				</fieldset>
 			{:else if $connectionMode === "wing"}
-				<p>todo: instructions</p>
+				<p>
+					Run <code>node wing-proxy.js &lt;ip&gt;</code>. <br />
+					All controlled channels must have "Link Customization to Source" disabled to see name/color.
+				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" bind:value={$wingConfig.host} /></p>
-					<p>Port: <input type="number" bind:value={$wingConfig.port} /></p>
+					<p>Host: <input type="text" placeholder="localhost" bind:value={$wingConfig.host} /></p>
+					<p>Port: <input type="number" placeholder="8080" bind:value={$wingConfig.port} /></p>
 					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$wingConfig.resendNum} min="0" max="4" /> times</p>
 					<!-- <p>Enable Live Metering?: <input type="checkbox" bind:checked={$x3wingConfig2Config.liveMetersEnabled} /></p> -->
 					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$wingConfig.autoReconnect} /></p>
@@ -120,8 +123,8 @@
 		<div class="verti" style="align-items: flex-start">
 			<fieldset class="verti" disabled={$mqttStatus.connected || null}>
 				<p>Host: <input type="text" bind:value={$mqttConfig.host} /></p>
-				<p>Port: <input type="number" bind:value={$mqttConfig.port} /></p>
-				<p>Basepath: <input type="text" bind:value={$mqttConfig.basepath} /></p>
+				<p>Port: <input type="number" placeholder="443" bind:value={$mqttConfig.port} /></p>
+				<p>Basepath: <input type="text" placeholder="/ws" bind:value={$mqttConfig.basepath} /></p>
 				<p>Use Authentication? <input type="checkbox" bind:checked={$mqttConfig.useAuth} /></p>
 				{#if $mqttConfig.useAuth}
 					<p>Username: <input type="text" bind:value={$mqttConfig.username} /></p>
