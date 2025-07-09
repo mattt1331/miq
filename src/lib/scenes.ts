@@ -80,6 +80,7 @@ export function regenerateScenes(selectedConfig: Config) {
 				}
 			});
 		});
+
 		return newScenes;
 	} else {
 		return [];

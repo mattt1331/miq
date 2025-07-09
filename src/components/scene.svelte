@@ -1,11 +1,5 @@
 <script lang="ts">
-	import {
-		connectionMode,
-		currentConnectionStatus,
-		ConnectionStatusEnum,
-		x32Config,
-		channelOverrides,
-	} from "../lib/stores";
+	import { appConfig, channelOverrides } from "../lib/stores";
 	import type { Scene } from "../lib/types";
 	import MeterCanvas from "./meterCanvas.svelte";
 
@@ -30,6 +24,7 @@
 				{@const overrideChannelNumber = $channelOverrides?.[i]?.channelNumber}
 				<div
 					class="channel"
+					style:order={i}
 					class:accent={mic?.active}
 					class:dne={!mic}
 					class:disabled={disableControl || mic?.character?.startsWith("?")}

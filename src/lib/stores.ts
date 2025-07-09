@@ -37,7 +37,9 @@ export const msConfig = localStorageWritable<Partial<MixingStationConfig>>("msCo
 export const m7clConfig = localStorageWritable<Partial<M7CLConfig>>("m7clConfig", {});
 export const wingConfig = localStorageWritable<Partial<WingConfig>>("wingConfig", {});
 
-export const appConfig = localStorageWritable<{ flipSceneOrder?: boolean }>("appConfig", {});
+export const appConfig = localStorageWritable<{ flipSceneOrder?: boolean }>("appConfig", {
+	flipSceneOrder: false,
+});
 
 export const currentConnection = writable<BaseConnection | null>(null);
 
