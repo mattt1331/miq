@@ -14,6 +14,7 @@ const WEBSOCKET_PORT = 8080;
 let config = {
 	receiver: "udp",
 	udpServer: {
+		// https://github.com/adzialocha/osc-js/issues/74
 		host: "0.0.0.0",
 		port: 2223,
 		exclusive: false,
@@ -32,8 +33,8 @@ const osc = new OSC({ plugin: new OSC.BridgePlugin(config) });
 
 if (VERBOSE) {
 	console.log("Verbose output is enabled. All messages will be logged.");
-	osc.on("*", (message) => {
-		console.log(message);
+	osc.on("*", (message, rinfo) => {
+		console.log(message, rinfo);
 	});
 }
 

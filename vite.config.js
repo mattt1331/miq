@@ -43,6 +43,6 @@ export default defineConfig({
 				start_url: "/",
 			},
 		}),
-		legacy({ targets: ["defaults", "not IE 11"] }),
+		legacy({ targets: ["defaults", "ios >= 12"] }),
 	],
 });
