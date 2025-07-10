@@ -15,14 +15,23 @@ function localStorageWritable<T>(key: string, defaultValue: T) {
 	return store;
 }
 
+export enum ConnectionStatusEnum {
+	DISCONNECTED = 0,
+	// truthy values are not disconnected
+	CONNECTED = 1,
+	CONNECTING = 2,
+}
+
 export const selectedConfigId = localStorageWritable<Config["id"] | null>("selectedConfig", null);
 
 export const mqttConfig = localStorageWritable<MqttConfig>("mqttConfig", {
 	mode: "tx",
-	rx_preview: true,
-	rx_live: false,
+	rx_preview: false,
+	rx_live: true,
 });
-export const mqttStatus = writable({ connected: false, address: null });
+export const mqttStatus = writable<{
+	status: ConnectionStatusEnum;
+}>({ status: ConnectionStatusEnum.DISCONNECTED });
 
 export const connectionMode = localStorageWritable<keyof typeof connectors>("connectionMode", "x32");
 connectionMode.update((mode) => {
@@ -43,15 +52,8 @@ export const appConfig = localStorageWritable<{ flipSceneOrder?: boolean }>("app
 
 export const currentConnection = writable<BaseConnection | null>(null);
 
-/** @enum {number} */
-export const ConnectionStatusEnum = {
-	DISCONNECTED: 0,
-	// truthy values are not disconnected
-	CONNECTED: 1,
-	CONNECTING: 2,
-} as const;
 export const currentConnectionStatus = writable<{
-	status: (typeof ConnectionStatusEnum)[keyof typeof ConnectionStatusEnum];
+	status: ConnectionStatusEnum;
 	address: string | null;
 }>({ status: ConnectionStatusEnum.DISCONNECTED, address: null });
 

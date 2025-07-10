@@ -178,10 +178,10 @@
 		}
 	};
 
-	let rxActive = $derived($mqttStatus.connected && $mqttConfig.mode == "rx");
+	let rxActive = $derived($mqttStatus.status === ConnectionStatusEnum.CONNECTED && $mqttConfig.mode == "rx");
 	// todo: move logic to mqtt file
 	$effect(() => {
-		if ($incomingMessage && $mqttStatus.connected && $mqttConfig.mode == "rx") {
+		if ($incomingMessage && rxActive) {
 			try {
 				const data = JSON.parse($incomingMessage.payloadString);
 				if (data.type === "config") {
@@ -199,12 +199,17 @@
 		}
 	});
 	$effect(() => {
-		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus.connected)
+		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus)
 		selectedConfig;
 		table;
 
 		let config = $state.snapshot(selectedConfig);
-		if (config && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
+		if (
+			config &&
+			$mqttStatus.status === ConnectionStatusEnum.CONNECTED &&
+			$mqttConfig.mode == "tx" &&
+			$mqttConfig.topic
+		) {
 			console.log("sending config", config);
 			mqttClient.send(
 				"miq/" + $mqttConfig.topic + "/config",
@@ -216,7 +221,12 @@
 		}
 	});
 	$effect(() => {
-		if (selectedConfig && $mqttStatus.connected && $mqttConfig.mode == "tx" && $mqttConfig.topic) {
+		if (
+			selectedConfig &&
+			$mqttStatus.status === ConnectionStatusEnum.CONNECTED &&
+			$mqttConfig.mode == "tx" &&
+			$mqttConfig.topic
+		) {
 			// send current and preview index
 			mqttClient.send(
 				"miq/" + $mqttConfig.topic,
@@ -294,16 +304,33 @@
 				<br />Settings
 			</button>
 			<button
-				onclick={() => ($mqttStatus.connected ? disconnect() : connect())}
+				onclick={() => ($mqttStatus.status === ConnectionStatusEnum.DISCONNECTED ? connect() : disconnect())}
+				disabled={$mqttStatus.status === ConnectionStatusEnum.CONNECTING}
 				class="connectionButton"
 				style="position: relative;"
 			>
 				MQTT:
 				<br />
 				{#if $mqttConfig.host && $mqttConfig.topic}
-					<span style:color={$mqttStatus.connected ? "var(--green)" : "var(--red)"}>
+					<span
+						style:color={`var(--${
+							$mqttStatus.status === ConnectionStatusEnum.CONNECTED
+								? "green"
+								: $mqttStatus.status === ConnectionStatusEnum.CONNECTING
+									? "yellow"
+									: "red"
+						})`}
+					>
 						<div class="iconlabel">
-							<box-icon name={$mqttStatus.connected ? "wifi" : "wifi-off"} color="currentColor" size="1em"></box-icon>
+							<box-icon
+								name={$mqttStatus.status === ConnectionStatusEnum.CONNECTED
+									? "wifi"
+									: $mqttStatus.status === ConnectionStatusEnum.CONNECTING
+										? "hourglass"
+										: "wifi-off"}
+								color="currentColor"
+								size="1em"
+							></box-icon>
 							<strong>
 								{getCompleteMqttConfig($mqttConfig).mode}/{getCompleteMqttConfig($mqttConfig).topic}
 							</strong>
@@ -315,8 +342,8 @@
 						no host
 					</div>
 				{/if}
-				{#if $mqttConfig.host && $mqttConfig.topic}
-					<span class="minilabel">tap to {$mqttStatus.connected ? "disconnect" : "connect"}</span>
+				{#if $mqttConfig.host && $mqttConfig.topic && $mqttStatus.status !== ConnectionStatusEnum.CONNECTING}
+					<span class="minilabel">tap to {$mqttStatus.status ? "disconnect" : "connect"}</span>
 				{/if}
 			</button>
 			<button
@@ -364,7 +391,7 @@
 							oldPreviewName: scenes[previewIndex]?.name,
 							oldCurrentName: scenes[currentIndex]?.name,
 						};
-						updateSheet(selectedConfig.id);
+						updateSheet(selectedConfig.id as number); // always from db
 					}}
 				>
 					<box-icon name="refresh" color="currentColor" size="1em"></box-icon>
@@ -613,8 +640,7 @@
 			white-space: nowrap;
 			flex-shrink: 0;
 			width: auto;
-			// min-width: max-content;
-			min-width: 300px;
+			min-width: max-content;
 			max-width: none;
 		}
 		&::-webkit-scrollbar {

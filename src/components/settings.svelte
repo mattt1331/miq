@@ -2,7 +2,7 @@
 	import Modal from "./modal.svelte";
 
 	import { mqttConfig, mqttStatus } from "../lib/stores";
-	import { connect, disconnect } from "../lib/mqtt";
+	import { connect as mqttConnect, disconnect as mqttDisconnect } from "../lib/mqtt";
 
 	import { connectors } from "../lib/connections";
 	import { newConnection } from "../lib/connectionUtil";
@@ -121,7 +121,7 @@
 	<details>
 		<summary>MQTT</summary>
 		<div class="verti" style="align-items: flex-start">
-			<fieldset class="verti" disabled={$mqttStatus.connected || null}>
+			<fieldset class="verti" disabled={$mqttStatus.status > 0 || null}>
 				<p>Host: <input type="text" bind:value={$mqttConfig.host} /></p>
 				<p>Port: <input type="number" placeholder="443" bind:value={$mqttConfig.port} /></p>
 				<p>Basepath: <input type="text" placeholder="/ws" bind:value={$mqttConfig.basepath} /></p>
@@ -146,10 +146,12 @@
 				{/if}
 			</fieldset>
 			<p>
-				{#if $mqttStatus.connected}
-					<button class="green" onclick={disconnect}>Connected (tap to disconnect)</button>
+				{#if $mqttStatus.status === ConnectionStatusEnum.CONNECTED}
+					<button class="green" onclick={mqttDisconnect}>Connected (tap to disconnect)</button>
+				{:else if $mqttStatus.status === ConnectionStatusEnum.CONNECTING}
+					<button class="yellow" disabled>Connecting</button>
 				{:else}
-					<button class="red" onclick={connect}>Disconnected (tap to connect)</button>
+					<button class="red" onclick={mqttConnect}>Disconnected (tap to connect)</button>
 				{/if}
 			</p>
 		</div>
