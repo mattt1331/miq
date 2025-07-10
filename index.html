@@ -10,6 +10,12 @@
 	</head>
 	<body>
 		<script defer>
+			if (!String.prototype.replaceAll) {
+				String.prototype.replaceAll = function (search, replacement) {
+					if (typeof search === "string") search = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+					return String(this).replace(new RegExp(search, "g"), replacement);
+				};
+			}
 			if (!window.BigInt) window.BigInt = bigInt;
 		</script>
 		<script type="module" src="/src/main.js" defer></script>

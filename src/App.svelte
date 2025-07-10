@@ -598,12 +598,24 @@
 		overflow-x: auto;
 		// width: 100%;
 		padding-bottom: min(6px, var(--spacing));
+
+		max-height: 50px; // ios 12 temporary fix
+
 		> * {
 			flex: 0 0 auto;
 			height: 3em;
 			padding: 0.5em 0.75em;
 			font-weight: bold;
 			transition: 120ms;
+
+			// todo: fix ios 12 text wrapping
+			display: inline-block;
+			white-space: nowrap;
+			flex-shrink: 0;
+			width: auto;
+			// min-width: max-content;
+			min-width: 300px;
+			max-width: none;
 		}
 		&::-webkit-scrollbar {
 			width: 6px;

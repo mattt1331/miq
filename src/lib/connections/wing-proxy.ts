@@ -90,7 +90,7 @@ export class WingConnection extends BaseConnection {
 		let cmnd =
 			`name='${name.replaceAll("'", "\\'").replaceAll("\\", "/").substring(0, 16)}'` +
 			`,col=${WingConnection.colors[color]}`;
-		if (active !== null) cmnd += `,mute=${active ? 1 : 0}`;
+		if (active !== null) cmnd += `,mute=${active ? 0 : 1}`;
 
 		const message = new OSC.Message(`/ch/${channel}`, cmnd);
 		console.log("Sending message:", message);

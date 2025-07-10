@@ -43,6 +43,8 @@ export default defineConfig({
 				start_url: "/",
 			},
 		}),
-		legacy({ targets: ["defaults", "ios >= 12"] }),
+		legacy({
+			targets: ["defaults", "ios >= 12"],
+		}),
 	],
 });
