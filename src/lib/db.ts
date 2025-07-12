@@ -86,7 +86,6 @@ db.version(2)
 								Object.assign(config, sheetProps);
 							}
 						}
-						delete config.sheetId;
 					});
 			})
 			.then(() => {
@@ -160,6 +159,7 @@ export async function loadExternalConfig(
 		return { ...configs, [id]: newConfig };
 	});
 	selectedConfigId.update(() => id);
+	makeToast("Loaded external config", `${newConfig.name}`, "info");
 }
 
 /** refetches and updates a sheet in the db */

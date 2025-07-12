@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { run, preventDefault } from "svelte/legacy";
-
 	import { onMount, tick, untrack } from "svelte";
 	import "boxicons";
 

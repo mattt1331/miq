@@ -162,6 +162,18 @@
 			Flip Scene Order: <input type="checkbox" bind:checked={$appConfig.flipSceneOrder} />
 			({$appConfig?.flipSceneOrder ? "live" : "preview"} first)
 		</p>
+		<p>built {BUILD_TIME}</p>
+		<p>
+			<button
+				onclick={async () => {
+					(await navigator.serviceWorker.getRegistration())?.update();
+					console.log("updated sw?");
+					(await navigator.serviceWorker.getRegistration())?.active?.addEventListener("statechange", function () {
+						if (this.state !== "activating" && this.state !== "activated") window.location.reload();
+					});
+				}}>Force update</button
+			>
+		</p>
 	</details>
 </Modal>
 

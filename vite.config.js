@@ -47,4 +47,7 @@ export default defineConfig({
 			targets: ["defaults", "ios >= 12"],
 		}),
 	],
+	define: {
+		BUILD_TIME: JSON.stringify(new Date().toISOString()),
+	},
 });

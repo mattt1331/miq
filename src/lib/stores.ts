@@ -51,6 +51,9 @@ export const appConfig = localStorageWritable<{ flipSceneOrder?: boolean }>("app
 });
 
 export const currentConnection = writable<BaseConnection | null>(null);
+currentConnection.subscribe((connection) => {
+	(window as any).connection = connection;
+});
 
 export const currentConnectionStatus = writable<{
 	status: ConnectionStatusEnum;

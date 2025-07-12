@@ -7,11 +7,6 @@ import type { BaseColor } from "../types";
 // https://wing-docs.com/article/osc
 // https://drive.google.com/file/d/1-iptgd2Uxw4qPEbmegG2Sqccf8AbRRfk/view
 
-interface OSCMessage {
-	address: string;
-	args: Array<{ buffer: ArrayBuffer }>;
-}
-
 export class WingConnection extends BaseConnection {
 	static name = "wing-proxy";
 
@@ -96,6 +91,28 @@ export class WingConnection extends BaseConnection {
 		console.log("Sending message:", message);
 
 		this.client.send(message);
+	}
+
+	// todo: test and pull from current scene
+	snapshot() {
+		let active = new Map<number, boolean>();
+
+		const subscriptionId = this.client.on("/ch/*", (message) => {
+			if (message.address.startsWith("/ch/")) {
+				console.log(message);
+				const channel = parseInt(message.address.split("/")[2]);
+				const args = message.args;
+				active.set(channel, args[0] === 0 ? true : false);
+			}
+		});
+
+		for (let i = 1; i <= 32; i++) {
+			this.client.send(new OSC.Message(`/ch/${i}/mute`));
+		}
+
+		setTimeout(() => {
+			this.client.off("/ch/*", subscriptionId);
+		}, 5000);
 	}
 
 	static getCompleteConfig() {

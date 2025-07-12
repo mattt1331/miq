@@ -1,17 +1,6 @@
 <script lang="ts">
-	import { run } from "svelte/legacy";
-
 	import Modal from "./modal.svelte";
-	import {
-		db,
-		storedConfigs,
-		externalConfigs,
-		configs,
-		updateSheet,
-		type Config,
-		type ExternalConfig,
-		type DbConfig,
-	} from "../lib/db";
+	import { db, storedConfigs, externalConfigs, configs, updateSheet, type Config, type DbConfig } from "../lib/db";
 	import Papa from "papaparse";
 	import { ddp } from "../lib/db";
 	import { selectedConfigId } from "../lib/stores";
