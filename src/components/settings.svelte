@@ -96,7 +96,7 @@
 				</fieldset>
 			{:else if $connectionMode === "wing"}
 				<p>
-					Run <code>node wing-proxy.js &lt;ip&gt;</code>. <br />
+					Run <code>node connectors/wing-proxy.js &lt;ip&gt;</code>. <br />
 					All controlled channels must have "Link Customization to Source" disabled to see name/color.
 				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
