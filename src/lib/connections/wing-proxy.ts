@@ -93,27 +93,48 @@ export class WingConnection extends BaseConnection {
 		this.client.send(message);
 	}
 
-	// todo: test and pull from current scene
-	snapshot() {
-		let active = new Map<number, boolean>();
-
-		const subscriptionId = this.client.on("/ch/*", (message) => {
-			if (message.address.startsWith("/ch/")) {
-				console.log(message);
-				const channel = parseInt(message.address.split("/")[2]);
-				const args = message.args;
-				active.set(channel, args[0] === 0 ? true : false);
+	message = <T extends OSC.Message | null>(address: string, ...args: any[]) =>
+		new Promise<T>((resolve) => {
+			this.client.send(new OSC.Message(address, ...args));
+			if (args.length === 0) {
+				const subscriptionId = this.client.on(address, (message: T) => {
+					resolve(message);
+					this.client.off(address, subscriptionId);
+				});
+			} else {
+				resolve(null as T);
 			}
 		});
 
-		for (let i = 1; i <= 32; i++) {
-			this.client.send(new OSC.Message(`/ch/${i}/mute`));
-		}
+	// todo: pull from current scene
+	snapshot = (channels = 32) =>
+		new Promise<Map<number, boolean>>((resolve) => {
+			let active = new Map<number, boolean>();
 
-		setTimeout(() => {
-			this.client.off("/ch/*", subscriptionId);
-		}, 5000);
-	}
+			const subscriptionId = this.client.on("/ch/*", (message: OSC.Message) => {
+				if (message.address.startsWith("/ch/")) {
+					// console.log(message);
+					const channel = parseInt(message.address.split("/")[2]);
+					const args = message.args;
+					active.set(channel, args[0] === 0 ? true : false);
+
+					if (active.size === channels) {
+						this.client.off("/ch/*", subscriptionId);
+						resolve(active);
+					}
+				}
+			});
+
+			for (let i = 1; i <= channels; i++) {
+				this.client.send(new OSC.Message(`/ch/${i}/mute`));
+			}
+		});
+
+	setFaders = (channels: number, level = "-5") => {
+		for (let i = 1; i <= channels; i++) {
+			this.client.send(new OSC.Message(`/ch/${i}/fdr`, level));
+		}
+	};
 
 	static getCompleteConfig() {
 		const config = get(wingConfig);

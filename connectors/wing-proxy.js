@@ -32,6 +32,7 @@ function discover(timeout = 5000) {
 
 			// WING,ip,name,model,serial,firmware
 			if (tokens.length >= 6 && tokens[0] === "WING") {
+				console.log(tokens);
 				cleanup();
 				resolve(tokens[1]);
 			}
