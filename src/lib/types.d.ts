@@ -42,3 +42,10 @@ export interface Scene {
 	notes: string;
 	mics: Map<number, MicState>;
 }
+
+export interface Toast {
+	title: string;
+	message: string;
+	type: "info" | "warn" | "error";
+	id: number;
+}

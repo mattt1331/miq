@@ -2,10 +2,10 @@ import { writable, get } from "svelte/store";
 import type { BaseConnection } from "./connections/baseConnection";
 import { connectors } from "./connections";
 import type { Config } from "./db";
-import type { M7CLConfig, MixingStationConfig, WingConfig, X32Config } from "./types";
+import type { M7CLConfig, MixingStationConfig, Toast, WingConfig, X32Config } from "./types";
 import type { MqttConfig } from "./mqtt";
 
-export const showingModal = writable<"settings" | "dbConfig" | null>(null);
+export const showingPage = writable<"settings" | "dbConfig" | null>(null);
 
 function localStorageWritable<T>(key: string, defaultValue: T) {
 	const storedValue = localStorage.getItem(key);
@@ -76,14 +76,7 @@ export const channelOverrides = writable<{
 
 export const channelMeters = writable<Float32Array>(new Float32Array());
 
-export const toasts = writable<
-	{
-		title: string;
-		message: string;
-		type: "info" | "warn" | "error";
-		id: number;
-	}[]
->([]);
+export const toasts = writable<Toast[]>([]);
 export function makeToast(title: string, message: string, type: "info" | "warn" | "error" = "info") {
 	toasts.update((toasts) => {
 		toasts.push({ title, message, type, id: Date.now() });

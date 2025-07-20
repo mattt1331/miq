@@ -9,6 +9,7 @@ import type { BaseColor } from "../types";
 
 export class WingConnection extends BaseConnection {
 	static name = "wing-proxy";
+	static fullName = "Behringer Wing (OSC)";
 
 	client: OSC;
 	liveRequestInterval: ReturnType<typeof setInterval> | undefined;
@@ -97,7 +98,9 @@ export class WingConnection extends BaseConnection {
 		new Promise<T>((resolve) => {
 			this.client.send(new OSC.Message(address, ...args));
 			if (args.length === 0) {
-				const subscriptionId = this.client.on(address, (message: T) => {
+				const subscriptionId = this.client.on("*", (message: T) => {
+					if (!message || message.address !== address) return;
+					console.log(message);
 					resolve(message);
 					this.client.off(address, subscriptionId);
 				});
@@ -106,34 +109,58 @@ export class WingConnection extends BaseConnection {
 			}
 		});
 
-	// todo: pull from current scene
-	snapshot = (channels = 32) =>
-		new Promise<Map<number, boolean>>((resolve) => {
-			let active = new Map<number, boolean>();
+	tools = {
+		// todo: pull from current scene
+		snapshot: (channels = 32) =>
+			new Promise<Map<number, boolean>>((resolve) => {
+				let active = new Map<number, boolean>();
 
-			const subscriptionId = this.client.on("/ch/*", (message: OSC.Message) => {
-				if (message.address.startsWith("/ch/")) {
-					// console.log(message);
-					const channel = parseInt(message.address.split("/")[2]);
-					const args = message.args;
-					active.set(channel, args[0] === 0 ? true : false);
+				const subscriptionId = this.client.on("/ch/*", (message: OSC.Message) => {
+					if (message.address.startsWith("/ch/")) {
+						// console.log(message);
+						const channel = parseInt(message.address.split("/")[2]);
+						const args = message.args;
+						active.set(channel, args[0] === 0 ? true : false);
 
-					if (active.size === channels) {
-						this.client.off("/ch/*", subscriptionId);
-						resolve(active);
+						if (active.size === channels) {
+							this.client.off("/ch/*", subscriptionId);
+							resolve(active);
+						}
 					}
+				});
+
+				for (let i = 1; i <= channels; i++) {
+					this.client.send(new OSC.Message(`/ch/${i}/mute`));
 				}
-			});
+			}),
 
+		setFaders: (channels: number, level = "-5") => {
 			for (let i = 1; i <= channels; i++) {
-				this.client.send(new OSC.Message(`/ch/${i}/mute`));
+				this.client.send(new OSC.Message(`/ch/${i}/fdr`, level));
 			}
-		});
+		},
 
-	setFaders = (channels: number, level = "-5") => {
-		for (let i = 1; i <= channels; i++) {
-			this.client.send(new OSC.Message(`/ch/${i}/fdr`, level));
-		}
+		setDisplayDay: () => {
+			this.message("/$ctl/cfg/lights/btns", 100);
+			this.message("/$ctl/cfg/lights/leds", 100);
+			this.message("/$ctl/cfg/lights/rgbleds", 35);
+			this.message("/$ctl/cfg/lights/chlcds", 40);
+			this.message("/$ctl/cfg/lights/chlcdctr", 50);
+			this.message("/$ctl/cfg/lights/chedit", 65);
+			this.message("/$ctl/cfg/lights/main", 100);
+			this.message("/$ctl/cfg/lights/glow", 100);
+		},
+
+		setDisplayNight: () => {
+			this.message("/$ctl/cfg/lights/btns", 50);
+			this.message("/$ctl/cfg/lights/leds", 50);
+			this.message("/$ctl/cfg/lights/rgbleds", 35);
+			this.message("/$ctl/cfg/lights/chlcds", 40);
+			this.message("/$ctl/cfg/lights/chlcdctr", 50);
+			this.message("/$ctl/cfg/lights/chedit", 65);
+			this.message("/$ctl/cfg/lights/main", 30);
+			this.message("/$ctl/cfg/lights/glow", 50);
+		},
 	};
 
 	static getCompleteConfig() {

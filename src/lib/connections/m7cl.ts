@@ -5,6 +5,7 @@ import type { BaseColor, M7CLConfig } from "../types";
 
 export class M7CLConnection extends BaseConnection {
 	static name = "M7CL (MIDI)";
+	static fullName = "Yamaha M7CL (MIDI)";
 
 	output: MIDIOutput | null = null;
 	input: MIDIInput | null = null;

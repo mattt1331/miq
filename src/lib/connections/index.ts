@@ -4,8 +4,8 @@ import { M7CLConnection } from "./m7cl";
 import { WingConnection } from "./wing-proxy";
 
 export const connectors = {
-	x32: X32Connection,
 	ms: MixingStationConnection,
-	m7cl: M7CLConnection,
+	x32: X32Connection,
 	wing: WingConnection,
+	m7cl: M7CLConnection,
 } as const;

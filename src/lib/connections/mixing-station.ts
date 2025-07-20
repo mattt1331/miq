@@ -5,6 +5,7 @@ import type { BaseColor } from "../types";
 
 export class MixingStationConnection extends BaseConnection {
 	static name = "Mixing Station";
+	static fullName = "Mixing Station";
 
 	client: WebSocket;
 	nameCharacterLimit = 0; // none to start

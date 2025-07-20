@@ -2,15 +2,15 @@
 	import { onMount, tick, untrack } from "svelte";
 	import "boxicons";
 
-	import Scene from "./components/scene.svelte";
-	import DbManager from "./components/dbManager.svelte";
-	import Settings from "./components/settings.svelte";
-	import Toast from "./components/toast.svelte";
-	import Dialog from "./components/dialog.svelte";
+	import Scene from "./components/Scene.svelte";
+	import DbManager from "./components/DbManager.svelte";
+	import Settings from "./components/Settings.svelte";
+	import Toast from "./components/Toast.svelte";
+	import Dialog from "./components/Dialog.svelte";
 
 	import {
 		appConfig,
-		showingModal,
+		showingPage,
 		selectedConfigId,
 		mqttStatus,
 		mqttConfig,
@@ -29,8 +29,6 @@
 	import { regenerateScenes } from "./lib/scenes";
 
 	import type { Scene as SceneData } from "./lib/types";
-
-	let sceneSelector: HTMLDivElement;
 
 	let selectedConfig = $derived(($configs || []).find((config) => config.id === $selectedConfigId) || null);
 
@@ -64,6 +62,7 @@
 		}
 	});
 
+	let sceneSelector: HTMLDivElement;
 	$effect(() => {
 		// todo: only fire on keyboard/button moves, not clicks
 		sceneSelector.querySelector(`button:nth-of-type(${previewIndex + 1})`)?.scrollIntoView({
@@ -242,8 +241,8 @@
 
 <svelte:window
 	onkeydown={(e) => {
-		if (e.key === "Escape") $showingModal = null;
-		if ($showingModal || channelOverrideDialogChannel !== null) return; // only run on main page
+		if (e.key === "Escape") $showingPage = null;
+		if ($showingPage || channelOverrideDialogChannel !== null) return; // only run on main page
 		if (e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
 		(document.activeElement as HTMLElement | null)?.blur();
 		if (e.key === "ArrowLeft" && previewIndex > 0) previewIndex--;
@@ -262,7 +261,7 @@
 	onblur={() => (debouncingFire = false)}
 />
 
-<main class:showingModal={$showingModal} inert={!!$showingModal} class:hideButtons={rxActive && $mqttConfig.rx_preview}>
+<main class:showingPage={$showingPage} inert={!!$showingPage} class:hideButtons={rxActive && $mqttConfig.rx_preview}>
 	<div class="top">
 		<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -270,7 +269,7 @@
 			style="font-weight: 100; opacity: 0.5;"
 			onclick={() => {
 				if (confirm("Refresh? (connections could be lost)")) {
-					window.location.reload();
+					location.reload();
 				}
 			}}
 			role="button"
@@ -297,7 +296,7 @@
 				<box-icon name="collapse-alt" color="currentColor" size="1em"></box-icon>
 				<br />Compact
 			</button>
-			<button onclick={(_) => ($showingModal = "settings")}>
+			<button onclick={() => ($showingPage = "settings")}>
 				<box-icon name="cog" color="currentColor" size="1em"></box-icon>
 				<br />Settings
 			</button>
@@ -389,7 +388,7 @@
 							oldPreviewName: scenes[previewIndex]?.name,
 							oldCurrentName: scenes[currentIndex]?.name,
 						};
-						updateSheet(selectedConfig.id as number); // always from db
+						updateSheet(selectedConfig.id);
 					}}
 				>
 					<box-icon name="refresh" color="currentColor" size="1em"></box-icon>
@@ -397,7 +396,7 @@
 				</button>
 			{/if}
 			<button
-				onclick={(_) => ($showingModal = "dbConfig")}
+				onclick={(_) => ($showingPage = "dbConfig")}
 				disabled={rxActive}
 				style="white-space: nowrap; text-overflow: ellipses;"
 			>
@@ -475,7 +474,7 @@
 	show={channelOverrideDialogChannel !== null}
 	onclose={() => {
 		channelOverrideDialogChannel = null;
-		$channelOverrides = { ...$channelOverrides }; // todo: trigger reactivity, but shoudl rewrite as sv5 state
+		$channelOverrides = { ...$channelOverrides }; // todo: trigger reactivity, but should rewrite as sv5 state
 	}}
 >
 	{#await new Promise<void>((resolve) => {
@@ -555,8 +554,8 @@
 		width: 100%;
 		box-sizing: border-box;
 		padding: var(--spacing);
-		transition: var(--modal-transition);
-		&.showingModal {
+		transition: var(--page-transition);
+		&.showingPage {
 			// transform: scale(0.8);
 			opacity: 0.2;
 			filter: blur(20px);

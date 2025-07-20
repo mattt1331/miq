@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { derived, writable, type Readable } from "svelte/store";
+import { derived, get, writable, type Readable } from "svelte/store";
 import Papa from "papaparse";
 import { makeToast, selectedConfigId } from "./stores";
 
@@ -119,6 +119,25 @@ export const configs = derived([storedConfigs, externalConfigs], ([$storedConfig
 	];
 });
 
+async function parseSheet(sheetId: string): Promise<Table> {
+	return new Promise<Table>((resolve, reject) => {
+		Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`, {
+			download: true,
+			header: false,
+			complete: function (results) {
+				if (results.data && results.data.length > 0 && results.data[0]?.length > 0) {
+					resolve(results.data);
+				} else {
+					reject(new Error("No data found in the sheet"));
+				}
+			},
+			error: function (error) {
+				reject(error);
+			},
+		});
+	});
+}
+
 export async function loadExternalConfig(
 	id: string,
 	source: string,
@@ -141,19 +160,8 @@ export async function loadExternalConfig(
 		id: id,
 	};
 	if (!newConfig.table) {
-		await new Promise<void>((resolve, reject) => {
-			Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${config.sheetId}/export?format=csv`, {
-				download: true,
-				header: false,
-				complete: function (results) {
-					console.log(results);
-					if (results.data && results.data.length > 0 && results.data[0]?.length > 0) {
-						newConfig.table = results.data;
-					}
-					resolve();
-				},
-			});
-		});
+		const table = await parseSheet(newConfig.sheetId!);
+		newConfig.table = table;
 	}
 	externalConfigs.update((configs) => {
 		return { ...configs, [id]: newConfig };
@@ -162,24 +170,24 @@ export async function loadExternalConfig(
 	makeToast("Loaded external config", `${newConfig.name}`, "info");
 }
 
-/** refetches and updates a sheet in the db */
-// todo: add support for linked mode?
-export async function updateSheet(dbId: number) {
-	let editing = await db.configs.get(dbId);
-	if (editing?.sheetId)
-		return await new Promise<DbConfig>((resolve) => {
-			Papa.parse<string[]>(`https://docs.google.com/spreadsheets/d/${editing.sheetId}/export?format=csv`, {
-				download: true,
-				header: false,
-				complete: async function (results) {
-					let data = results.data,
-						record = { ...editing, table: data, lastFetched: new Date() };
-					if (data) {
-						await db.configs.update(dbId, record);
-						makeToast("Sheet updated", `"${editing?.name}"`, "info");
-						resolve(record);
-					}
-				},
-			});
-		});
+/** refetches and updates a sheet */
+export async function updateSheet<T extends DbConfig | ExternalConfig>(id: T["id"]) {
+	const isExternal = typeof id === "string";
+
+	let editing = isExternal ? get(externalConfigs)[id] : await db.configs.get(id);
+
+	if (!editing?.sheetId) throw makeToast("No sheetId configured", "", "error");
+
+	const table = await parseSheet(editing.sheetId);
+	let record = { ...editing, table, lastFetched: new Date() } as T;
+
+	isExternal
+		? externalConfigs.update((configs) => {
+				return { ...configs, [id]: record as ExternalConfig };
+		  })
+		: await db.configs.update(id, record as DbConfig);
+
+	makeToast("Sheet updated", `"${editing?.name}"`, "info");
+
+	return record;
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { appConfig, channelOverrides } from "../lib/stores";
+	import { channelOverrides } from "../lib/stores";
 	import type { Scene } from "../lib/types";
-	import MeterCanvas from "./meterCanvas.svelte";
+	import MeterCanvas from "./MeterCanvas.svelte";
 
 	let {
 		scene,

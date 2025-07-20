@@ -1,5 +1,5 @@
 <script>
-	import Modal from "./modal.svelte";
+	import Page from "./Page.svelte";
 
 	import { mqttConfig, mqttStatus } from "../lib/stores";
 	import { connect as mqttConnect, disconnect as mqttDisconnect } from "../lib/mqtt";
@@ -20,48 +20,31 @@
 	import { M7CLConnection } from "../lib/connections/m7cl";
 </script>
 
-<Modal modalName="settings">
+<Page id="settings">
 	<h1>Settings</h1>
 	<details>
 		<summary>Mixer Connection</summary>
 		<div class="verti">
-			<p>MIQ requires a proxy to connect to a mixer. 2 proxy methods are supported:</p>
-			<ul>
-				<li>
-					<a href="https://www.npmjs.com/package/x32-proxy" target="_blank" class="openNewIcon">x32-proxy</a>: For
-					Behringer/Midas M32/X32 mixers only. Free, requires NodeJS.
-				</li>
-				<li>
-					<a href="https://mixingstation.app/" target="_blank" class="openNewIcon">Mixing Station</a>: For several
-					popular mixers. Paid, stanalone, only newer versions are supported.
-				</li>
-			</ul>
+			<p>
+				MIQ requires a proxy to connect to a mixer. <a
+					href="https://mixingstation.app/"
+					target="_blank"
+					class="openNewIcon">Mixing Station</a
+				> is supported for several popular mixers but is paid, stanalone, and only newer versions are supported. Limited
+				other consoles have dedicated, free connectors.
+			</p>
 
 			<p>
 				Connection mode: <select disabled={$currentConnectionStatus.status > 0} bind:value={$connectionMode}>
 					{#each Object.entries(connectors) as [key, connector]}
-						<option value={key}>{connector.name}</option>
+						<option value={key}>{connector.fullName}</option>
 					{/each}
 				</select>
 				{#if $currentConnectionStatus.status > 0}(disconnect to edit){/if}
 			</p>
 
-			{#if $connectionMode === "x32"}
-				<p>
-					Once <a href="https://www.npmjs.com/package/x32-proxy" target="_blank">x32-proxy</a> is installed, use the
-					following command to start up the proxy server: <br />
-					<code>x32-proxy --ws --target your.mixer.ip.address</code> <br />
-					then, leaving the settings below blank, tap connect.
-				</p>
-				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" placeholder="localhost" bind:value={$x32Config.host} /></p>
-					<p>Port: <input type="number" placeholder="8080" bind:value={$x32Config.port} /></p>
-					<p>Secure: <input type="checkbox" bind:checked={$x32Config.secure} /></p>
-					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$x32Config.resendNum} min="0" max="4" /> times</p>
-					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$x32Config.liveMetersEnabled} /></p>
-					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$x32Config.autoReconnect} /></p>
-				</fieldset>
-			{:else if $connectionMode === "ms"}
+			{#if $connectionMode === "ms"}
+				<p>Supports all consoles supported by Mixing Station, some are paid and will require a license.</p>
 				<p>
 					On the start-up screen of <a href="https://mixingstation.app/" target="_blank">Mixing Station</a>, click the
 					settings cog in the upper right corner, then enable the REST API:
@@ -78,7 +61,39 @@
 					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$msConfig.resendNum} min="0" max="4" /> times</p>
 					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$msConfig.autoReconnect} /></p>
 				</fieldset>
+			{:else if $connectionMode === "x32"}
+				<p>Supports Behringer/Midas X32/M32 only.</p>
+				<p>
+					Install NodeJS and <a href="https://www.npmjs.com/package/x32-proxy" target="_blank">x32-proxy</a>, use the
+					following command to start up the proxy server: <br />
+					<code>x32-proxy --ws --target your.mixer.ip.address</code> <br />
+					then, leaving the settings below blank, tap connect.
+				</p>
+				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
+					<p>Host: <input type="text" placeholder="localhost" bind:value={$x32Config.host} /></p>
+					<p>Port: <input type="number" placeholder="8080" bind:value={$x32Config.port} /></p>
+					<p>Secure: <input type="checkbox" bind:checked={$x32Config.secure} /></p>
+					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$x32Config.resendNum} min="0" max="4" /> times</p>
+					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$x32Config.liveMetersEnabled} /></p>
+					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$x32Config.autoReconnect} /></p>
+				</fieldset>
+			{:else if $connectionMode === "wing"}
+				<p>Supports Behringer Wing only.</p>
+				<p>
+					Run <code>node connectors/wing-proxy.js &lt;ip&gt;</code>. <br />
+					All controlled channels must have "Link Customization to Source" disabled to see name/color.
+				</p>
+				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
+					<p>Host: <input type="text" placeholder="localhost" bind:value={$wingConfig.host} /></p>
+					<p>Port: <input type="number" placeholder="8080" bind:value={$wingConfig.port} /></p>
+					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$wingConfig.resendNum} min="0" max="4" /> times</p>
+					<!-- <p>Enable Live Metering?: <input type="checkbox" bind:checked={$x3wingConfig2Config.liveMetersEnabled} /></p> -->
+					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$wingConfig.autoReconnect} /></p>
+				</fieldset>
 			{:else if $connectionMode == "m7cl"}
+				<p>
+					Supports Yamaha M7CL only. (support for similar Yamaha consoles may be simple to add changing the console ID)
+				</p>
 				<p>
 					Connect to the M7CL over MIDI, and configure it to receive NRPN control change and parameter change commands.
 				</p>
@@ -93,18 +108,6 @@
 							{/each}
 						</select>
 					</p>
-				</fieldset>
-			{:else if $connectionMode === "wing"}
-				<p>
-					Run <code>node connectors/wing-proxy.js &lt;ip&gt;</code>. <br />
-					All controlled channels must have "Link Customization to Source" disabled to see name/color.
-				</p>
-				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Host: <input type="text" placeholder="localhost" bind:value={$wingConfig.host} /></p>
-					<p>Port: <input type="number" placeholder="8080" bind:value={$wingConfig.port} /></p>
-					<p>Resend cues (0≤n≤4): <input type="number" bind:value={$wingConfig.resendNum} min="0" max="4" /> times</p>
-					<!-- <p>Enable Live Metering?: <input type="checkbox" bind:checked={$x3wingConfig2Config.liveMetersEnabled} /></p> -->
-					<p>Enable Auto Reconnect?: <input type="checkbox" bind:checked={$wingConfig.autoReconnect} /></p>
 				</fieldset>
 			{/if}
 			<p>
@@ -162,6 +165,7 @@
 			Flip Scene Order: <input type="checkbox" bind:checked={$appConfig.flipSceneOrder} />
 			({$appConfig?.flipSceneOrder ? "live" : "preview"} first)
 		</p>
+		<hr />
 		<p>built {BUILD_TIME}</p>
 		<p>
 			<button
@@ -169,13 +173,18 @@
 					(await navigator.serviceWorker.getRegistration())?.update();
 					console.log("updated sw?");
 					(await navigator.serviceWorker.getRegistration())?.active?.addEventListener("statechange", function () {
-						if (this.state !== "activating" && this.state !== "activated") window.location.reload();
+						if (this.state !== "activating" && this.state !== "activated") location.reload();
 					});
 				}}>Force update</button
 			>
+			<button
+				onclick={() => {
+					location.reload();
+				}}>Force refresh</button
+			>
 		</p>
 	</details>
-</Modal>
+</Page>
 
 <style lang="scss">
 	div[disabled] {

@@ -10,6 +10,7 @@ import type { BaseColor, BaseConnectionConfig, Scene } from "../types";
 
 export abstract class BaseConnection {
 	static name: string;
+	static fullName: string;
 
 	constructor() {
 		// reset status but keep reconnecting indicator if set

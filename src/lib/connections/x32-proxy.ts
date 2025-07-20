@@ -11,6 +11,7 @@ interface OSCMessage {
 
 export class X32Connection extends BaseConnection {
 	static name = "x32-proxy";
+	static fullName = "Music Tribe X32/M32 (OSC)";
 
 	client: OSC;
 	liveRequestInterval: ReturnType<typeof setInterval> | undefined;

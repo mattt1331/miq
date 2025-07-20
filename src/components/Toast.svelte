@@ -1,9 +1,11 @@
-<script>
+<script lang="ts">
 	import "boxicons";
-	import { fly, scale } from "svelte/transition";
-	import { toasts } from "../lib/stores";
 	import { onMount } from "svelte";
+	import { fly } from "svelte/transition";
+	import { toasts } from "../lib/stores";
+	import type { Toast } from "../lib/types";
 
+	let { toastMessage, timeout = 8000 }: { toastMessage: Toast; timeout?: number } = $props();
 
 	const { title, message, type, id } = toastMessage;
 
@@ -12,9 +14,6 @@
 		warn: { icon: "error", color: "var(--yellow)" },
 		error: { icon: "error-circle", color: "var(--red)" },
 	}[type || "info"];
-
-	/** @type {{toastMessage: any, timeout?: number}} */
-	let { toastMessage, timeout = 8000 } = $props();
 
 	const close = () => toasts.update((t) => t.filter((t) => t.id !== id));
 
@@ -30,7 +29,8 @@
 		in:fly={{ y: -100, opacity: 1, duration: 240 }}
 		out:fly={{ y: -100, opacity: 0, duration: 240 }}
 	>
-		<box-icon style="flex-shrink: 0" name={style?.icon || "question-mark"} color={style?.color || "currentColor"}></box-icon>
+		<box-icon style="flex-shrink: 0" name={style?.icon || "question-mark"} color={style?.color || "currentColor"}
+		></box-icon>
 		<p style="text-overflow: ellipsis; max-height: 100%; overflow: hidden;">
 			<strong title={title || null}>{title || "Message"}</strong><br />
 			<span style="white-space: nowrap; text-overflow: ellipses" title={message}>{message}</span>

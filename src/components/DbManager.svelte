@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Modal from "./modal.svelte";
+	import Page from "./Page.svelte";
 	import { db, storedConfigs, externalConfigs, configs, updateSheet, type Config, type DbConfig } from "../lib/db";
 	import Papa from "papaparse";
 	import { ddp } from "../lib/db";
@@ -13,8 +13,7 @@
 	$inspect("editing", editing);
 
 	async function addNew() {
-		// @ts-expect-error
-		const newOne = await db.configs.add({});
+		const newOne = await db.configs.add({} as DbConfig);
 		console.log(newOne);
 		editing = { id: newOne, ...ddp };
 	}
@@ -86,8 +85,8 @@
 	}
 </script>
 
-<Modal modalName="dbConfig">
-	{#snippet children({ closeModal })}
+<Page id="dbConfig">
+	{#snippet children({ closePage })}
 		<h1>Config Manager</h1>
 		<div>
 			<button onclick={addNew}>Add New</button>
@@ -115,7 +114,7 @@
 						}}
 						ondblclick={() => {
 							$selectedConfigId = item.id;
-							closeModal();
+							closePage();
 						}}
 					>
 						{item.name || "Untitled"}
@@ -130,7 +129,7 @@
 							class="white"
 							onclick={() => {
 								$selectedConfigId = editing?.id || null;
-								closeModal();
+								closePage();
 							}}>Open Config</button
 						>
 					</p>
@@ -142,7 +141,7 @@
 						<button
 							onclick={async () => {
 								if (editing?.id) {
-									let record = await updateSheet(editing.id);
+									let record = await updateSheet<DbConfig>(editing.id);
 									editing = { ...record };
 								}
 							}}>Fetch Now</button
@@ -196,7 +195,7 @@
 			</div>
 		</div>
 	{/snippet}
-</Modal>
+</Page>
 
 <style lang="scss">
 	.itemList {
