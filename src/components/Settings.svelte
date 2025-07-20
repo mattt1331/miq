@@ -1,23 +1,23 @@
 <script>
 	import Page from "./Page.svelte";
 
-	import { mqttConfig, mqttStatus } from "../lib/stores";
 	import { connect as mqttConnect, disconnect as mqttDisconnect } from "../lib/mqtt";
+	import { mqttConfig, mqttStatus } from "../lib/stores";
 
 	import { connectors } from "../lib/connections";
+	import { M7CLConnection } from "../lib/connections/m7cl";
 	import { newConnection } from "../lib/connectionUtil";
 	import {
+		appConfig,
 		connectionMode,
+		ConnectionStatusEnum,
 		currentConnection,
 		currentConnectionStatus,
-		ConnectionStatusEnum,
-		x32Config,
-		msConfig,
 		m7clConfig,
+		msConfig,
 		wingConfig,
-		appConfig,
+		x32Config,
 	} from "../lib/stores";
-	import { M7CLConnection } from "../lib/connections/m7cl";
 </script>
 
 <Page id="settings">

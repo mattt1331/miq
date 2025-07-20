@@ -1,4 +1,4 @@
-import { ddp, type Config, type Table } from "./db";
+import { ddp, type Config } from "./db";
 import type { Scene } from "./types";
 
 export function regenerateScenes(selectedConfig: Config) {

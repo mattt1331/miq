@@ -1,13 +1,13 @@
-import { writable, get } from "svelte/store";
-import type { BaseConnection } from "./connections/baseConnection";
+import { get, writable } from "svelte/store";
 import { connectors } from "./connections";
+import type { BaseConnection } from "./connections/baseConnection";
 import type { Config } from "./db";
-import type { M7CLConfig, MixingStationConfig, Toast, WingConfig, X32Config } from "./types";
 import type { MqttConfig } from "./mqtt";
+import type { M7CLConfig, MixingStationConfig, Toast, WingConfig, X32Config } from "./types";
 
 export const showingPage = writable<"settings" | "dbConfig" | null>(null);
 
-function localStorageWritable<T>(key: string, defaultValue: T) {
+export function localStorageWritable<T>(key: string, defaultValue: T) {
 	const storedValue = localStorage.getItem(key);
 	const store = writable<T>(storedValue !== null ? JSON.parse(storedValue) : defaultValue);
 

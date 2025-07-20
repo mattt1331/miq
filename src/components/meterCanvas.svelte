@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import type { BaseConnection } from "../lib/connections/baseConnection";
 	import { channelMeters, currentConnection } from "../lib/stores";
-	import { onMount } from "svelte";
 
 	let { channel = 20 }: { channel?: number } = $props();
 	let canvas: HTMLCanvasElement;

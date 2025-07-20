@@ -1,8 +1,8 @@
 import OSC from "osc-js";
 import { get } from "svelte/store";
-import { channelMeters, makeToast, wingConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
-import { BaseConnection } from "./baseConnection";
+import { ConnectionStatusEnum, currentConnectionStatus, makeToast, wingConfig } from "../stores";
 import type { BaseColor } from "../types";
+import { BaseConnection } from "./baseConnection";
 
 // https://wing-docs.com/article/osc
 // https://drive.google.com/file/d/1-iptgd2Uxw4qPEbmegG2Sqccf8AbRRfk/view

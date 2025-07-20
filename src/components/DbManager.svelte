@@ -1,9 +1,8 @@
 <script lang="ts">
-	import Page from "./Page.svelte";
-	import { db, storedConfigs, externalConfigs, configs, updateSheet, type Config, type DbConfig } from "../lib/db";
 	import Papa from "papaparse";
-	import { ddp } from "../lib/db";
-	import { selectedConfigId } from "../lib/stores";
+	import { selectedConfigId } from "../lib/configState.svelte";
+	import { configs, db, ddp, externalConfigs, storedConfigs, updateSheet, type Config, type DbConfig } from "../lib/db";
+	import Page from "./Page.svelte";
 
 	import "boxicons";
 
@@ -91,7 +90,7 @@
 		<div>
 			<button onclick={addNew}>Add New</button>
 			{#if $configs.find((item) => item.id === "linked")}
-				<button onclick={importLinkedConfig}>Import Linked Config</button>
+				<button onclick={importLinkedConfig}>import Linked Config</button>
 			{/if}
 		</div>
 		<div class="horiz" style="width: 100%; height: 600px">

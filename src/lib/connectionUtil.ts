@@ -1,6 +1,6 @@
 import { get, writable } from "svelte/store";
-import { connectionMode, currentConnection, currentConnectionStatus, x32Config, msConfig, m7clConfig } from "./stores";
 import { connectors } from "./connections";
+import { connectionMode, currentConnection, currentConnectionStatus, m7clConfig, msConfig, x32Config } from "./stores";
 
 const updateAddress = () => {
 	const currentAddress = get(currentConnectionStatus).address;

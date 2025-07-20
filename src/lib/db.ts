@@ -1,6 +1,6 @@
 import Dexie from "dexie";
-import { derived, get, writable, type Readable } from "svelte/store";
 import Papa from "papaparse";
+import { derived, get, writable, type Readable } from "svelte/store";
 import { makeToast, selectedConfigId } from "./stores";
 
 export const ddp = {
@@ -109,15 +109,16 @@ function dexieStore<T>(querier: () => T | Promise<T>, initialValue: T): Readable
 export const storedConfigs = dexieStore(async () => await db.configs.toArray(), []);
 export const externalConfigs = writable<{ [s: string]: ExternalConfig }>({});
 
-export const configs = derived([storedConfigs, externalConfigs], ([$storedConfigs, $externalConfigs]) => {
-	return [
-		...($storedConfigs || []),
-		...Object.keys($externalConfigs).map((id) => ({
-			...$externalConfigs[id],
-			id,
-		})),
-	];
-});
+export const configs = derived([storedConfigs, externalConfigs], ([$storedConfigs, $externalConfigs]) => [
+	...($storedConfigs || []),
+	...Object.keys($externalConfigs).map(
+		(id) =>
+			({
+				...$externalConfigs[id],
+				id,
+			} as ExternalConfig)
+	),
+]);
 
 async function parseSheet(sheetId: string): Promise<Table> {
 	return new Promise<Table>((resolve, reject) => {

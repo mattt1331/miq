@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
-import { makeToast, msConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
-import { BaseConnection } from "./baseConnection";
+import { ConnectionStatusEnum, currentConnectionStatus, makeToast, msConfig } from "../stores";
 import type { BaseColor } from "../types";
+import { BaseConnection } from "./baseConnection";
 
 export class MixingStationConnection extends BaseConnection {
 	static name = "Mixing Station";

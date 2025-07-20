@@ -1,11 +1,11 @@
+import { get } from "svelte/store";
 import {
-	currentConnection,
-	currentConnectionStatus,
 	ConnectionStatusEnum,
 	channelOverrides,
+	currentConnection,
+	currentConnectionStatus,
 	makeToast,
 } from "../stores";
-import { get } from "svelte/store";
 import type { BaseColor, BaseConnectionConfig, Scene } from "../types";
 
 export abstract class BaseConnection {

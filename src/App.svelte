@@ -1,36 +1,31 @@
 <script lang="ts">
-	import { onMount, tick, untrack } from "svelte";
 	import "boxicons";
+	import { onMount, tick, untrack } from "svelte";
 
-	import Scene from "./components/Scene.svelte";
 	import DbManager from "./components/DbManager.svelte";
+	import Dialog from "./components/Dialog.svelte";
+	import Scene from "./components/Scene.svelte";
 	import Settings from "./components/Settings.svelte";
 	import Toast from "./components/Toast.svelte";
-	import Dialog from "./components/Dialog.svelte";
 
+	import { currentIndex, scenes, selectedConfig, selectedConfigId } from "./lib/configState.svelte";
+	import { connectors } from "./lib/connections";
+	import { connectionAddress, newConnection } from "./lib/connectionUtil";
+	import { configs, loadExternalConfig, updateSheet } from "./lib/db";
+	import { connect, disconnect, getCompleteMqttConfig, incomingMessage, mqttClient } from "./lib/mqtt";
 	import {
 		appConfig,
-		showingPage,
-		selectedConfigId,
-		mqttStatus,
-		mqttConfig,
-		toasts,
-		makeToast,
-		currentConnection,
-		currentConnectionStatus,
+		channelOverrides,
 		connectionMode,
 		ConnectionStatusEnum,
-		channelOverrides,
+		currentConnection,
+		currentConnectionStatus,
+		makeToast,
+		mqttConfig,
+		mqttStatus,
+		showingPage,
+		toasts,
 	} from "./lib/stores";
-	import { connectors } from "./lib/connections";
-	import { newConnection, connectionAddress } from "./lib/connectionUtil";
-	import { configs, loadExternalConfig, updateSheet, type Config } from "./lib/db";
-	import { connect, disconnect, getCompleteMqttConfig, incomingMessage, mqttClient } from "./lib/mqtt";
-	import { regenerateScenes } from "./lib/scenes";
-
-	import type { Scene as SceneData } from "./lib/types";
-
-	let selectedConfig = $derived(($configs || []).find((config) => config.id === $selectedConfigId) || null);
 
 	onMount(() => {
 		// check url for linked config
@@ -46,21 +41,7 @@
 		}
 	});
 
-	/** current sheet contents */
-	let table = $derived(selectedConfig?.table || []);
-
-	let scenes: SceneData[] = $derived((selectedConfig && regenerateScenes(selectedConfig)) || []);
-
 	let previewIndex = $state(0);
-	let currentIndex = $state(-1);
-	let currentIndexConfigId = $state<Config["id"] | null>(null);
-
-	$effect(() => {
-		if ($selectedConfigId !== currentIndexConfigId) {
-			currentIndex = -1;
-			currentIndexConfigId = null;
-		}
-	});
 
 	let sceneSelector: HTMLDivElement;
 	$effect(() => {
@@ -73,9 +54,9 @@
 	});
 
 	function fire(index: number) {
-		currentIndex = index;
-		currentIndexConfigId = $selectedConfigId;
-		if (index === previewIndex) {
+		currentIndex.index = index;
+		currentIndex.config = $selectedConfigId;
+		if (index === previewIndex || previewIndex === -1) {
 			previewIndex = index + 1;
 			sceneSelector.querySelector(`button:nth-of-type(${index + 1})`)?.scrollIntoView({
 				behavior: "smooth",
@@ -83,7 +64,7 @@
 				inline: "center",
 			});
 		}
-		$currentConnection?.onFire(scenes[currentIndex]);
+		$currentConnection?.onFire($scenes[currentIndex.index]);
 	}
 
 	let initialHistoryState = $state(history.state);
@@ -91,7 +72,7 @@
 		scenes; // try to restore from history state, first time only
 		if (initialHistoryState !== null) {
 			tick().then(() => {
-				const index = scenes.findIndex((scene) => scene.name === initialHistoryState);
+				const index = $scenes.findIndex((scene) => scene.name === initialHistoryState);
 				if (index !== -1) {
 					previewIndex = index;
 					initialHistoryState = null;
@@ -100,8 +81,8 @@
 		}
 	});
 	$effect(() => {
-		if (scenes.length && scenes[previewIndex]?.name) {
-			history.replaceState(scenes[previewIndex].name, "");
+		if ($scenes.length && $scenes[previewIndex]?.name) {
+			history.replaceState($scenes[previewIndex].name, "");
 		}
 	});
 
@@ -112,12 +93,12 @@
 		oldCurrentName: string;
 	} | null>(null); // fixme:
 	$effect(() => {
-		scenes; // trigger this effect when scenes change
+		// scenes; // trigger this effect when scenes change
 		// try to keep same position when updating sheet
 
 		let data = untrack(() => updateData);
 		if (data !== null) {
-			let newNames = scenes.map((scene) => scene.name);
+			let newNames = $scenes.map((scene) => scene.name);
 
 			function findNewIndex(
 				startIndex: number,
@@ -136,8 +117,8 @@
 				return fallback || startIndex;
 			}
 
-			currentIndex = findNewIndex(
-				untrack(() => currentIndex), // old
+			currentIndex.index = findNewIndex(
+				untrack(() => currentIndex.index), // old
 				data.oldCurrentName,
 				-1, // don't say we have some random thing fired
 			);
@@ -151,12 +132,15 @@
 	});
 
 	$inspect("app", {
-		table,
-		selectedConfig,
-		configs: $configs,
-		selectedConfigId: $selectedConfigId,
-		scenes,
-	});
+		// selectedConfig: $selectedConfig,
+		// configs: $configs,
+		// selectedConfigId: $selectedConfigId,
+		scenes: $scenes,
+	}).with(console.trace);
+	$inspect("index", {
+		currentIndex,
+		previewIndex,
+	}).with(console.trace);
 
 	let debouncingFire = $state(false);
 
@@ -183,12 +167,10 @@
 				const data = JSON.parse($incomingMessage.payloadString);
 				if (data.type === "config") {
 					loadExternalConfig("mqtt", "MQTT", data.data);
-					// $selectedConfigId = "mqtt";
+					if ($mqttConfig.rx_live) previewIndex = -1; // flag reset preview index
 				} else if (data.type === "index") {
 					if ($mqttConfig.rx_preview) previewIndex = data.data.previewIndex;
-					if ($mqttConfig.rx_live && data.data.currentIndex !== currentIndex) {
-						fire(data.data.currentIndex);
-					}
+					if ($mqttConfig.rx_live) fire(data.data.currentIndex);
 				}
 			} catch (error) {
 				console.log(error);
@@ -197,10 +179,9 @@
 	});
 	$effect(() => {
 		// console.log(selectedConfig, $mqttConfig.mode, $mqttStatus)
-		selectedConfig;
-		table;
+		$selectedConfig;
 
-		let config = $state.snapshot(selectedConfig);
+		let config = $selectedConfig;
 		if (
 			config &&
 			$mqttStatus.status === ConnectionStatusEnum.CONNECTED &&
@@ -219,7 +200,7 @@
 	});
 	$effect(() => {
 		if (
-			selectedConfig &&
+			$selectedConfig &&
 			$mqttStatus.status === ConnectionStatusEnum.CONNECTED &&
 			$mqttConfig.mode == "tx" &&
 			$mqttConfig.topic
@@ -227,7 +208,7 @@
 			// send current and preview index
 			mqttClient.send(
 				"miq/" + $mqttConfig.topic,
-				JSON.stringify({ type: "index", data: { currentIndex, previewIndex } }),
+				JSON.stringify({ type: "index", data: { currentIndex: currentIndex.index, previewIndex } }),
 				0,
 				true,
 			);
@@ -236,20 +217,24 @@
 </script>
 
 <svelte:head>
-	<title>{selectedConfig?.name || "miq"}</title>
+	<title>{[$selectedConfig?.name, "miq"].filter(Boolean).join(" | ")}</title>
 </svelte:head>
 
 <svelte:window
 	onkeydown={(e) => {
 		if (e.key === "Escape") $showingPage = null;
+
 		if ($showingPage || channelOverrideDialogChannel !== null) return; // only run on main page
 		if (e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
+
 		(document.activeElement as HTMLElement | null)?.blur();
+
 		if (e.key === "ArrowLeft" && previewIndex > 0) previewIndex--;
-		else if (e.key === "ArrowRight" && previewIndex < scenes.length - 1) previewIndex++;
+		else if (e.key === "ArrowRight" && previewIndex < $scenes.length - 1) previewIndex++;
 		else if (e.key === "Home") previewIndex = 0;
-		else if (e.key === "End") previewIndex = scenes.length - 1;
-		else if (!debouncingFire && e.key === " " && previewIndex < scenes.length) {
+		else if (e.key === "End") previewIndex = $scenes.length - 1;
+		else if (e.key === "KeyR") fire(currentIndex.index);
+		else if (!debouncingFire && e.key === " " && previewIndex < $scenes.length) {
 			debouncingFire = true;
 			fire(previewIndex);
 			// setTimeout(() => debouncingFire = false, 1000);
@@ -266,7 +251,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<h1
-			style="font-weight: 100; opacity: 0.5;"
+			style="font-weight: 100; color: var(--text-dimmed);"
 			onclick={() => {
 				if (confirm("Refresh? (connections could be lost)")) {
 					location.reload();
@@ -381,14 +366,14 @@
 							: "connect"}</span
 				>
 			</button>
-			{#if selectedConfig && selectedConfig.sheetId && !rxActive}
+			{#if $selectedConfig && $selectedConfig.sheetId && !rxActive}
 				<button
 					onclick={() => {
 						updateData = {
-							oldPreviewName: scenes[previewIndex]?.name,
-							oldCurrentName: scenes[currentIndex]?.name,
+							oldPreviewName: $scenes[previewIndex]?.name,
+							oldCurrentName: $scenes[currentIndex.index]?.name,
 						};
-						updateSheet(selectedConfig.id);
+						updateSheet($selectedConfig.id);
 					}}
 				>
 					<box-icon name="refresh" color="currentColor" size="1em"></box-icon>
@@ -396,7 +381,7 @@
 				</button>
 			{/if}
 			<button
-				onclick={(_) => ($showingPage = "dbConfig")}
+				onclick={() => ($showingPage = "dbConfig")}
 				disabled={rxActive}
 				style="white-space: nowrap; text-overflow: ellipses;"
 			>
@@ -434,14 +419,15 @@
 			}}
 		>
 			<div class="sceneProgress">
-				<strong>{currentIndex + 1}</strong>/{scenes.length}
-				<!-- ({parseInt((previewIndex+1)/scenes.length*100)}%) -->
+				<span style:--progress={Math.max(((currentIndex.index + 1) / $scenes.length) * 100, 0) + "%"}>
+					<strong>{currentIndex.index + 1}</strong>/{$scenes.length}
+				</span>
 			</div>
-			{#each scenes as scene, i}
+			{#each $scenes as scene, i}
 				<button
 					onclick={() => (previewIndex = i)}
-					class:green={i === previewIndex && i !== currentIndex}
-					class:red={i === currentIndex}
+					class:green={i === previewIndex && i !== currentIndex.index}
+					class:red={i === currentIndex.index}
 				>
 					{scene.name}
 				</button>
@@ -450,20 +436,20 @@
 			<button onclick={() => (previewIndex = 0)}>&lt;&lt; START</button>
 		</div>
 		<div class="sceneview" class:reversed={$appConfig?.flipSceneOrder || false}>
-			<Scene scene={scenes[previewIndex]} bind:channelOverrideDialogChannel />
-			<Scene scene={scenes[currentIndex]} live bind:channelOverrideDialogChannel />
+			<Scene scene={$scenes[previewIndex]} bind:channelOverrideDialogChannel />
+			<Scene scene={$scenes[currentIndex.index]} live bind:channelOverrideDialogChannel />
 		</div>
 	</div>
 	<div class="buttons">
 		{#if !(rxActive && $mqttConfig.rx_preview)}
-			<button disabled={previewIndex < 1} onclick={(_) => previewIndex--}>Preview backwards</button>
-			<button disabled={previewIndex > scenes.length - 1} onclick={(_) => previewIndex++}>Preview forwards</button>
-			<button disabled={previewIndex === currentIndex + 1} onclick={(_) => (previewIndex = currentIndex + 1)}
+			<button disabled={previewIndex < 1} onclick={() => previewIndex--}>Preview backwards</button>
+			<button disabled={previewIndex > $scenes.length - 1} onclick={() => previewIndex++}>Preview forwards</button>
+			<button disabled={previewIndex === currentIndex.index + 1} onclick={() => (previewIndex = currentIndex.index + 1)}
 				>Preview reset</button
 			>
 		{/if}
 		{#if !rxActive}
-			<button disabled={previewIndex > scenes.length - 1} class="red" onclick={(_) => fire(previewIndex)}
+			<button disabled={previewIndex > $scenes.length - 1} class="red" onclick={() => fire(previewIndex)}
 				>Fire next</button
 			>
 		{/if}
@@ -623,11 +609,11 @@
 		// width: 100%;
 		padding-bottom: min(6px, var(--spacing));
 
-		max-height: 50px; // ios 12 temporary fix
+		max-height: 3em; // ios 12 temporary fix
 
 		> * {
 			flex: 0 0 auto;
-			height: 3em;
+			height: 100%;
 			padding: 0.5em 0.75em;
 			font-weight: bold;
 			transition: 120ms;
@@ -660,6 +646,15 @@
 			left: 0;
 			font-weight: 200;
 			font-size: 1.5em;
+
+			@supports (-webkit-background-clip: text) or (background-clip: text) {
+				span {
+					background-image: linear-gradient(to right, var(--text) var(--progress), var(--text-dimmed) var(--progress));
+					-webkit-background-clip: text;
+					background-clip: text;
+					-webkit-text-fill-color: transparent;
+				}
+			}
 		}
 	}
 	.sceneview {

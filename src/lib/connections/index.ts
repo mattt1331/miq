@@ -1,7 +1,7 @@
-import { X32Connection } from "./x32-proxy";
-import { MixingStationConnection } from "./mixing-station";
 import { M7CLConnection } from "./m7cl";
+import { MixingStationConnection } from "./mixing-station";
 import { WingConnection } from "./wing-proxy";
+import { X32Connection } from "./x32-proxy";
 
 export const connectors = {
 	ms: MixingStationConnection,

@@ -1,7 +1,7 @@
-import { get, writable } from "svelte/store";
-import { channelMeters, makeToast, m7clConfig, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
-import { BaseConnection } from "./baseConnection";
+import { get } from "svelte/store";
+import { channelMeters, ConnectionStatusEnum, currentConnectionStatus, m7clConfig, makeToast } from "../stores";
 import type { BaseColor, M7CLConfig } from "../types";
+import { BaseConnection } from "./baseConnection";
 
 export class M7CLConnection extends BaseConnection {
 	static name = "M7CL (MIDI)";

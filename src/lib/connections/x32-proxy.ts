@@ -1,8 +1,8 @@
 import OSC from "osc-js";
 import { get } from "svelte/store";
-import { channelMeters, makeToast, x32Config, currentConnectionStatus, ConnectionStatusEnum } from "../stores";
-import { BaseConnection } from "./baseConnection";
+import { channelMeters, ConnectionStatusEnum, currentConnectionStatus, makeToast, x32Config } from "../stores";
 import type { BaseColor } from "../types";
+import { BaseConnection } from "./baseConnection";
 
 interface OSCMessage {
 	address: string;
