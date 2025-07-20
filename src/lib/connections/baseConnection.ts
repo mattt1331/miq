@@ -77,6 +77,8 @@ export abstract class BaseConnection {
 		console.warn("BaseConnection._fireChannel not implemented, please override in subclass");
 	}
 
+	tools: Record<string, () => void | Promise<any>> = {};
+
 	/** returns the complete configuration for this connection type */
 	static getCompleteConfig(): BaseConnectionConfig {
 		return {

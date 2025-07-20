@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, type Snippet } from "svelte";
+	import { showingDialog } from "../lib/stores";
 
 	let {
 		show = $bindable(false),
@@ -28,6 +29,7 @@
 		if (dialog) {
 			if (show) dialog.showModal();
 			else dialog.close();
+			$showingDialog = show;
 		}
 	});
 

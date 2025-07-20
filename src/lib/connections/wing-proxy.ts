@@ -1,5 +1,6 @@
 import OSC from "osc-js";
 import { get } from "svelte/store";
+import { getTrackedMics } from "../configState.svelte";
 import { ConnectionStatusEnum, currentConnectionStatus, makeToast, wingConfig } from "../stores";
 import type { BaseColor } from "../types";
 import { BaseConnection } from "./baseConnection";
@@ -94,48 +95,59 @@ export class WingConnection extends BaseConnection {
 		this.client.send(message);
 	}
 
-	message = <T extends OSC.Message | null>(address: string, ...args: any[]) =>
-		new Promise<T>((resolve) => {
+	message: {
+		(address: string): Promise<OSC.Message>;
+		(address: string, ...args: any[]): Promise<null>;
+	} = (address, ...args): any =>
+		new Promise((resolve) => {
 			this.client.send(new OSC.Message(address, ...args));
 			if (args.length === 0) {
-				const subscriptionId = this.client.on("*", (message: T) => {
+				const subscriptionId = this.client.on("*", (message: OSC.Message) => {
 					if (!message || message.address !== address) return;
 					console.log(message);
 					resolve(message);
 					this.client.off(address, subscriptionId);
 				});
 			} else {
-				resolve(null as T);
+				resolve(null);
 			}
 		});
 
 	tools = {
-		// todo: pull from current scene
-		snapshot: (channels = 32) =>
-			new Promise<Map<number, boolean>>((resolve) => {
+		snapshot: () =>
+			new Promise<string>((resolve) => {
 				let active = new Map<number, boolean>();
+
+				let mics = getTrackedMics(); // todo: include current actors and store in more useful format
+				if (!mics || mics.length === 0) return;
 
 				const subscriptionId = this.client.on("/ch/*", (message: OSC.Message) => {
 					if (message.address.startsWith("/ch/")) {
-						// console.log(message);
+						console.log(message);
 						const channel = parseInt(message.address.split("/")[2]);
 						const args = message.args;
 						active.set(channel, args[0] === 0 ? true : false);
 
-						if (active.size === channels) {
+						if (active.size === mics.length) {
 							this.client.off("/ch/*", subscriptionId);
-							resolve(active);
+
+							let snapshot = "";
+							for (let i of mics) {
+								const isActive = active.get(i);
+								snapshot += `ch${i}=${isActive ? "on" : "off"}; `;
+							}
+							resolve(snapshot);
 						}
 					}
 				});
 
-				for (let i = 1; i <= channels; i++) {
+				for (let i of mics) {
 					this.client.send(new OSC.Message(`/ch/${i}/mute`));
 				}
 			}),
 
-		setFaders: (channels: number, level = "-5") => {
-			for (let i = 1; i <= channels; i++) {
+		resetFaders: (level = "-5") => {
+			for (let i of getTrackedMics()) {
 				this.client.send(new OSC.Message(`/ch/${i}/fdr`, level));
 			}
 		},

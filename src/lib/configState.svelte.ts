@@ -35,3 +35,7 @@ export function getCurrentScene() {
 	if (currentIndex.index < 0) return null;
 	return get(scenes)[currentIndex.index] || null;
 }
+
+export function getTrackedMics() {
+	return Array.from(get(scenes)?.[0]?.mics?.keys() || []);
+}

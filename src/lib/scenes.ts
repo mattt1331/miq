@@ -42,6 +42,7 @@ export function regenerateScenes(selectedConfig: Config) {
 					actor: actor,
 					character: table[row][i],
 					active: table[row][i].trim() !== "" && table[row][i].trim().slice(0, 2) !== "//",
+					// row, // todo: determine useful information to store to reconstruct the sheet later
 				});
 			});
 			newScenes.push({

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { showingPage } from "../lib/stores";
+	import type { PageId } from "../lib/types";
 
 	const closePage = () => ($showingPage = null);
 	let {
 		id,
 		children,
 	}: {
-		id: string;
+		id: PageId;
 		children?: Snippet<[{ closePage: typeof closePage }]>;
 	} = $props();
 </script>

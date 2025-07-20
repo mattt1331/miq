@@ -3,9 +3,10 @@ import { connectors } from "./connections";
 import type { BaseConnection } from "./connections/baseConnection";
 import type { Config } from "./db";
 import type { MqttConfig } from "./mqtt";
-import type { M7CLConfig, MixingStationConfig, Toast, WingConfig, X32Config } from "./types";
+import type { M7CLConfig, MixingStationConfig, PageId, Toast, WingConfig, X32Config } from "./types";
 
-export const showingPage = writable<"settings" | "dbConfig" | null>(null);
+export const showingPage = writable<PageId | null>(null);
+export const showingDialog = writable(false); // todo: move to pages
 
 export function localStorageWritable<T>(key: string, defaultValue: T) {
 	const storedValue = localStorage.getItem(key);

@@ -8,6 +8,7 @@
 	import Settings from "./components/Settings.svelte";
 	import Toast from "./components/Toast.svelte";
 
+	import ToolsPage from "./components/ToolsPage.svelte";
 	import { currentIndex, scenes, selectedConfig, selectedConfigId } from "./lib/configState.svelte";
 	import { connectors } from "./lib/connections";
 	import { connectionAddress, newConnection } from "./lib/connectionUtil";
@@ -23,6 +24,7 @@
 		makeToast,
 		mqttConfig,
 		mqttStatus,
+		showingDialog,
 		showingPage,
 		toasts,
 	} from "./lib/stores";
@@ -224,7 +226,7 @@
 	onkeydown={(e) => {
 		if (e.key === "Escape") $showingPage = null;
 
-		if ($showingPage || channelOverrideDialogChannel !== null) return; // only run on main page
+		if ($showingPage || $showingDialog) return; // only run on main page
 		if (e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
 
 		(document.activeElement as HTMLElement | null)?.blur();
@@ -327,6 +329,10 @@
 				{#if $mqttConfig.host && $mqttConfig.topic && $mqttStatus.status !== ConnectionStatusEnum.CONNECTING}
 					<span class="minilabel">tap to {$mqttStatus.status ? "disconnect" : "connect"}</span>
 				{/if}
+			</button>
+			<button onclick={() => ($showingPage = "tools")}>
+				<box-icon name="customize" color="currentColor" size="1em"></box-icon>
+				<br />Tools
 			</button>
 			<button
 				onclick={() => ($currentConnectionStatus.status > 0 ? $currentConnection?.close() : newConnection())}
@@ -524,6 +530,7 @@
 
 <DbManager />
 <Settings />
+<ToolsPage />
 
 <div class="toasts">
 	{#each $toasts as toastMessage}

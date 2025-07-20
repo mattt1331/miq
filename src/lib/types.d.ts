@@ -49,3 +49,5 @@ export interface Toast {
 	type: "info" | "warn" | "error";
 	id: number;
 }
+
+export type PageId = "settings" | "dbConfig" | "tools";
