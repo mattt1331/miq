@@ -50,4 +50,4 @@ export interface Toast {
 	id: number;
 }
 
-export type PageId = "settings" | "dbConfig" | "tools";
+export type PageId = "settings" | "dbConfig";

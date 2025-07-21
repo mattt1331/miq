@@ -88,7 +88,8 @@ body {
 button,
 input,
 select,
-textarea {
+textarea,
+.dropdown > summary {
 	color: inherit;
 	font-family: inherit;
 	background: none;

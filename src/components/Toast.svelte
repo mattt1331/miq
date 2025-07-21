@@ -31,7 +31,7 @@
 	>
 		<box-icon style="flex-shrink: 0" name={style?.icon || "question-mark"} color={style?.color || "currentColor"}
 		></box-icon>
-		<p style="text-overflow: ellipsis; max-height: 100%; overflow: hidden;">
+		<p>
 			<strong title={title || null}>{title || "Message"}</strong><br />
 			<span style="white-space: nowrap; text-overflow: ellipses" title={message}>{message}</span>
 		</p>
@@ -58,5 +58,12 @@
 		font-size: 0.7em;
 		max-width: 400px;
 		box-shadow: 0 0 5px 0 var(--bg);
+
+		p {
+			text-overflow: ellipsis;
+			max-height: 100%;
+			overflow: hidden;
+			flex: 1;
+		}
 	}
 </style>

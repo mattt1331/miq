@@ -8,7 +8,7 @@
 	import Settings from "./components/Settings.svelte";
 	import Toast from "./components/Toast.svelte";
 
-	import ToolsPage from "./components/ToolsPage.svelte";
+	import Dropdown from "./components/Dropdown.svelte";
 	import { currentIndex, scenes, selectedConfig, selectedConfigId } from "./lib/configState.svelte";
 	import { connectors } from "./lib/connections";
 	import { connectionAddress, newConnection } from "./lib/connectionUtil";
@@ -330,10 +330,21 @@
 					<span class="minilabel">tap to {$mqttStatus.status ? "disconnect" : "connect"}</span>
 				{/if}
 			</button>
-			<button onclick={() => ($showingPage = "tools")}>
+			<Dropdown
+				items={Object.entries($currentConnection?.tools || {}).map(([name, fn]) => [
+					name,
+					async () => {
+						const output = await fn();
+						if (output) {
+							await navigator.clipboard.writeText(output);
+							makeToast("Output copied to clipboard", output, "info");
+						}
+					},
+				])}
+			>
 				<box-icon name="customize" color="currentColor" size="1em"></box-icon>
 				<br />Tools
-			</button>
+			</Dropdown>
 			<button
 				onclick={() => ($currentConnectionStatus.status > 0 ? $currentConnection?.close() : newConnection())}
 				class="connectionButton"
@@ -399,15 +410,6 @@
 					{$configs.find((item) => item.id === $selectedConfigId)?.name || "--"}
 				</strong>
 			</button>
-			<!-- <select
-				style="font-weight: 900;"
-				bind:value={$selectedConfigId}
-				disabled={rxActive}
-			>
-				{#each $configs || [] as item}
-					<option value={item.id}>{item.name || "Untitled"}</option>
-				{/each}
-			</select> -->
 		</div>
 	</div>
 	<div class="middle">
@@ -530,7 +532,6 @@
 
 <DbManager />
 <Settings />
-<ToolsPage />
 
 <div class="toasts">
 	{#each $toasts as toastMessage}
@@ -563,16 +564,19 @@
 		justify-content: space-between;
 		height: var(--top-height);
 		gap: var(--spacing);
-		button,
-		select {
-			height: 100%;
-			font-size: 1.1em;
-			font-size: 0.83em;
+		.horiz > :global(*) {
+			font-size: 0.8em;
 			font-weight: 300;
+			height: 100%;
 			text-align: left;
-			strong {
-				font-weight: 900;
+
+			:global(summary) {
+				height: 100%;
+				font-size: inherit;
 			}
+		}
+		strong {
+			font-weight: 900;
 		}
 		.connectionButton {
 			min-width: 130px;
