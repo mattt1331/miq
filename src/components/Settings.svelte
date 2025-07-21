@@ -2,7 +2,7 @@
 	import Page from "./Page.svelte";
 
 	import { connect as mqttConnect, disconnect as mqttDisconnect } from "../lib/mqtt";
-	import { mqttConfig, mqttStatus } from "../lib/stores";
+	import { makeToast, mqttConfig, mqttStatus } from "../lib/stores";
 
 	import { connectors } from "../lib/connections";
 	import { M7CLConnection } from "../lib/connections/m7cl";
@@ -170,10 +170,22 @@
 		<p>
 			<button
 				onclick={async () => {
-					(await navigator.serviceWorker.getRegistration())?.update();
-					console.log("updated sw?");
-					(await navigator.serviceWorker.getRegistration())?.active?.addEventListener("statechange", function () {
-						if (this.state !== "activating" && this.state !== "activated") location.reload();
+					const reg = await navigator.serviceWorker.getRegistration();
+					if (!reg) {
+						makeToast("No service worker registered", "", "warn");
+						return;
+					}
+					reg
+						.update()
+						.then(() => {
+							makeToast("Service worker updated", "", "info");
+						})
+						.catch((err) => {
+							makeToast("Error updating service worker", err.message, "error");
+						});
+					navigator.serviceWorker.addEventListener("controllerchange", () => {
+						makeToast("New service worker taking control", "", "info");
+						location.reload();
 					});
 				}}>Force update</button
 			>

@@ -108,6 +108,11 @@ fieldset {
 	border: none;
 }
 
+hr {
+	border: 1px solid var(--fg);
+	margin: var(--spacing) 0;
+}
+
 .tabber {
 	display: inline-flex;
 	> button {
