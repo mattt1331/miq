@@ -34,7 +34,6 @@ export interface MicState {
 	character: string;
 	actor: string;
 	switchingFrom?: string;
-	switchingTo?: string;
 }
 
 export interface Scene {

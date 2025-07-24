@@ -28,6 +28,7 @@
 		showingPage,
 		toasts,
 	} from "./lib/stores";
+	import { tools as globalTools } from "./lib/tools";
 
 	onMount(() => {
 		// check url for linked config
@@ -160,6 +161,8 @@
 			$channelOverrides[number] = { disableControl: false, channelNumber: undefined }; // include form binds
 		}
 	};
+
+	let tools = $derived({ ...globalTools, ...$currentConnection?.tools });
 
 	let rxActive = $derived($mqttStatus.status === ConnectionStatusEnum.CONNECTED && $mqttConfig.mode == "rx");
 	// todo: move logic to mqtt file
@@ -331,7 +334,7 @@
 				{/if}
 			</button>
 			<Dropdown
-				items={Object.entries($currentConnection?.tools || {}).map(([name, fn]) => [
+				items={Object.entries(tools || {}).map(([name, fn]) => [
 					name,
 					async () => {
 						const output = await fn();
