@@ -33,7 +33,18 @@
 		></box-icon>
 		<p>
 			<strong title={title || null}>{title || "Message"}</strong><br />
-			<span style="white-space: nowrap; text-overflow: ellipses" title={message}>{message}</span>
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<span
+				title={message}
+				onclick={({ currentTarget }) => {
+					const range = document.createRange();
+					range.selectNodeContents(currentTarget);
+					const selection = window.getSelection();
+					selection?.removeAllRanges();
+					selection?.addRange(range);
+				}}>{message}</span
+			>
 		</p>
 		<box-icon
 			name="x"
@@ -47,7 +58,7 @@
 	</div>
 {/if}
 
-<style>
+<style lang="scss">
 	.toast {
 		background: #222;
 		margin: var(--spacing);
@@ -60,10 +71,25 @@
 		box-shadow: 0 0 5px 0 var(--bg);
 
 		p {
-			text-overflow: ellipsis;
 			max-height: 100%;
-			overflow: hidden;
 			flex: 1;
+			overflow: hidden;
+			text-overflow: ellipsis;
+
+			strong {
+				white-space: nowrap;
+			}
+			span {
+				white-space: pre-wrap;
+			}
+		}
+	}
+
+	// to easily print out the tool reports when selected
+	@media print {
+		* {
+			background: none;
+			color: black;
 		}
 	}
 </style>

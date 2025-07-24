@@ -20,7 +20,7 @@ export const tools = {
 				}
 			}
 			if (add) {
-				summary += `\n${scene.name.replace(/\s*\(.*?\)\s*$/, "")}:\n`;
+				summary += `\n${scene.name.replace(/\s*\(.*?\)\s*$/, "")}\n`;
 				summary += add;
 			}
 		}
@@ -29,7 +29,8 @@ export const tools = {
 	},
 
 	micChangesByMic: () => {
-		let data = new Map<number, [boolean, string[], string[]]>();
+		let data = new Map<number, [boolean, string[], string[]]>(),
+			total = 0;
 
 		for (const scene of get(scenes)) {
 			for (const [micNum, micState] of scene.mics) {
@@ -40,6 +41,7 @@ export const tools = {
 						_seen = true;
 						pages.push(scene.name.match(/\w+?\b/)?.[0] ?? scene.name);
 						actors.push(micState.actor);
+						total++;
 					}
 				} else {
 					_seen = false;
@@ -49,7 +51,7 @@ export const tools = {
 			}
 		}
 
-		let summary = "";
+		let summary = `Total mic changes: ${total}\n`;
 		for (const [micNum, [_, pages, actors]] of [...data.entries()].sort((a, b) => a[0] - b[0])) {
 			summary += `#${micNum}\t${pages.join(", ")}\t${actors.join(" → ")}\n`;
 		}
