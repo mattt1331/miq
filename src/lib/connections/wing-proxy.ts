@@ -166,7 +166,7 @@ export class WingConnection extends BaseConnection {
 		setDisplayNight: () => {
 			this.message("/$ctl/cfg/lights/btns", 50);
 			this.message("/$ctl/cfg/lights/leds", 50);
-			this.message("/$ctl/cfg/lights/rgbleds", 35);
+			this.message("/$ctl/cfg/lights/rgbleds", 15);
 			this.message("/$ctl/cfg/lights/chlcds", 40);
 			this.message("/$ctl/cfg/lights/chlcdctr", 50);
 			this.message("/$ctl/cfg/lights/chedit", 65);
