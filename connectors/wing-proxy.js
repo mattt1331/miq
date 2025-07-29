@@ -1,10 +1,12 @@
 import { createSocket } from "dgram";
 import OSC from "osc-js";
 
-const VERBOSE = true;
 const NATIVE_PORT = 2222;
 const OSC_PORT = 2223;
 const WEBSOCKET_PORT = 8080;
+
+const args = process.argv.slice(2);
+let VERBOSE = args.splice(args.indexOf("--verbose"), 1).length > 0;
 
 function discover(timeout = 5000) {
 	return new Promise((resolve, reject) => {
@@ -52,7 +54,6 @@ function discover(timeout = 5000) {
 	});
 }
 
-const args = process.argv.slice(2);
 let UDP_HOST = args[0];
 if (!UDP_HOST) {
 	console.log("No host provided, discovering WING device...");

@@ -7,6 +7,8 @@ import { BaseConnection } from "./baseConnection";
 
 // https://wing-docs.com/article/osc
 // https://drive.google.com/file/d/1-iptgd2Uxw4qPEbmegG2Sqccf8AbRRfk/view
+// https://sites.google.com/site/patrickmaillot/wing
+// https://github.com/dannydulai/libwing/blob/main/src/console.rs
 
 export class WingConnection extends BaseConnection {
 	static name = "wing-proxy";
