@@ -119,6 +119,7 @@ export class M7CLConnection extends BaseConnection {
 				active ? 127 : 0,
 			]);
 
+			/*
 			let nameBytes = name
 				.replace(/[^\x00-\x7e]/g, " ")
 				.substring(0, 10)
@@ -158,6 +159,7 @@ export class M7CLConnection extends BaseConnection {
 				...nameBytes.slice(5, 10),
 				0xf7,
 			]);
+			*/
 		}
 	}
 	private _onstatechange(event: MIDIConnectionEvent): void {
