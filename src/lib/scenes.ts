@@ -21,7 +21,7 @@ export function regenerateScenes(selectedConfig: Config) {
 		let table = selectedConfig.table;
 		let newScenes: Scene[] = [];
 		let actorMicPairs = new Map<number, { row: number; actor: string }>();
-		let dcaAssignments: Scene["dcas"] = new Map(); // dca to its channels
+		let lastDcaAssignments: Scene["dcas"] = undefined; // same map object may be shared across scenes
 
 		function generateActorMicPairs(col: number) {
 			for (let j = config.micsStartRow; j < table.length; j++) {
@@ -36,6 +36,8 @@ export function regenerateScenes(selectedConfig: Config) {
 		}
 
 		function generateDCAChange(col: number) {
+			let map: Map<number, Set<number>> = new Map();
+
 			for (let j = config.micsStartRow; j < table.length; j++) {
 				const micNum = Array.from(actorMicPairs.entries()).find(([_channel, { row }]) => row === j)?.[0];
 				if (!isMic(micNum)) {
@@ -49,10 +51,12 @@ export function regenerateScenes(selectedConfig: Config) {
 					.filter(Number);
 
 				for (const dca of dcasOfChannel) {
-					if (!dcaAssignments.has(dca)) dcaAssignments.set(dca, new Set());
-					dcaAssignments.get(dca)?.add(micNum);
+					if (!map.has(dca)) map.set(dca, new Set());
+					map.get(dca)?.add(micNum);
 				}
 			}
+
+			lastDcaAssignments = Object.freeze(map);
 		}
 
 		for (let i = config.scenesStartCol; i < table[0].length; i++) {
@@ -60,10 +64,11 @@ export function regenerateScenes(selectedConfig: Config) {
 
 			switch (configMode) {
 				case "MIC_CHANGE":
+				case "MIC":
 					generateActorMicPairs(i);
 					continue;
 
-				case "DCA_CHANGE":
+				case "DCA":
 					generateDCAChange(i);
 					continue;
 
@@ -88,7 +93,7 @@ export function regenerateScenes(selectedConfig: Config) {
 				notes: table[config.notesRow][i],
 				name: table[config.namesRow][i],
 				mics,
-				dcas: dcaAssignments,
+				dcas: lastDcaAssignments,
 			});
 		}
 
