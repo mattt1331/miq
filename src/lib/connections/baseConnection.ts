@@ -58,6 +58,14 @@ export abstract class BaseConnection {
 							mic.character.startsWith("#") ? mic.actor : mic.character || mic.actor,
 							sheetDisableControl ? "MAGENTA" : mic.active ? "CYAN" : "RED"
 						);
+
+						if (scene.dcas && scene.dcas.size > 0) {
+							for (const [dca, dcaChannels] of scene.dcas) {
+								// even if channel is not in dca, we must make sure the dca is clear
+								// todo: only fire CHANGED dcas, not all
+								this._fireDCA(channelNum, dca, dcaChannels.has(channelNum));
+							}
+						}
 					}
 				});
 			}
@@ -75,6 +83,10 @@ export abstract class BaseConnection {
 	 */
 	protected _fireChannel(channel: number, active: boolean | null, name: string, color: BaseColor): void {
 		console.warn("BaseConnection._fireChannel not implemented, please override in subclass");
+	}
+
+	protected _fireDCA(channel: number, dca: number, include: boolean): void {
+		console.warn("DCAs not implemented");
 	}
 
 	tools: Record<string, () => void | Promise<any>> = {};

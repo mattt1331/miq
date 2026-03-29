@@ -1,5 +1,9 @@
 import { ddp, type Config } from "./db";
-import type { Scene } from "./types";
+import { makeToast } from "./stores";
+import type { Scene, SceneConfigKey } from "./types";
+
+const isMic = (micNum: number | undefined): micNum is number =>
+	typeof micNum == "number" && !Number.isNaN(micNum) && micNum > 0;
 
 export function regenerateScenes(selectedConfig: Config) {
 	console.log("regenerating scenes");
@@ -17,11 +21,12 @@ export function regenerateScenes(selectedConfig: Config) {
 		let table = selectedConfig.table;
 		let newScenes: Scene[] = [];
 		let actorMicPairs = new Map<number, { row: number; actor: string }>();
+		let dcaAssignments: Scene["dcas"] = new Map(); // dca to its channels
 
 		function generateActorMicPairs(col: number) {
 			for (let j = config.micsStartRow; j < table.length; j++) {
 				const micNum = parseInt(table[j][col]);
-				if (!Number.isNaN(micNum) && micNum > 0) {
+				if (isMic(micNum)) {
 					actorMicPairs.set(micNum, {
 						row: j,
 						actor: table[j][config.actorNamesCol],
@@ -30,10 +35,44 @@ export function regenerateScenes(selectedConfig: Config) {
 			}
 		}
 
+		function generateDCAChange(col: number) {
+			for (let j = config.micsStartRow; j < table.length; j++) {
+				const micNum = Array.from(actorMicPairs.entries()).find(([_channel, { row }]) => row === j)?.[0];
+				if (!isMic(micNum)) {
+					console.error(j, micNum);
+					continue;
+				}
+
+				const dcasOfChannel = table[j][col]
+					.split(",")
+					.map((dca) => parseInt(dca))
+					.filter(Number);
+
+				for (const dca of dcasOfChannel) {
+					if (!dcaAssignments.has(dca)) dcaAssignments.set(dca, new Set());
+					dcaAssignments.get(dca)?.add(micNum);
+				}
+			}
+		}
+
 		for (let i = config.scenesStartCol; i < table[0].length; i++) {
-			if (table[config.flagsRow][i].includes("MIC_CHANGE")) {
-				generateActorMicPairs(i);
-				continue;
+			let configMode = table[config.flagsRow][i].trim() as SceneConfigKey;
+
+			switch (configMode) {
+				case "MIC_CHANGE":
+					generateActorMicPairs(i);
+					continue;
+
+				case "DCA_CHANGE":
+					generateDCAChange(i);
+					continue;
+
+				case "":
+					// treat as mute/unmute
+					break;
+
+				default:
+					makeToast("invalid config", `column ${i}: ${configMode}`, "warn");
 			}
 
 			let mics: Scene["mics"] = new Map();
@@ -49,6 +88,7 @@ export function regenerateScenes(selectedConfig: Config) {
 				notes: table[config.notesRow][i],
 				name: table[config.namesRow][i],
 				mics,
+				dcas: dcaAssignments,
 			});
 		}
 

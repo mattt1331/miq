@@ -29,6 +29,8 @@ export interface WingConfig extends BaseConnectionConfig {
 
 export type BaseColor = "RED" | "CYAN" | "MAGENTA";
 
+export type SceneConfigKey = "MIC_CHANGE" | "DCA_CHANGE" | "";
+
 export interface MicState {
 	active: boolean;
 	character: string;
@@ -40,6 +42,7 @@ export interface Scene {
 	name: string;
 	notes: string;
 	mics: Map<number, MicState>;
+	dcas: Map<number, Set<number>>; // dca to its channels
 }
 
 export interface Toast {
