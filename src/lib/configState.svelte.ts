@@ -5,7 +5,7 @@ import { selectedConfigId } from "./stores";
 
 type ConfigId = Config["id"] | null;
 
-export { selectedConfigId } from "./stores";
+export { selectedConfigId };
 
 export const selectedConfig = derived(
 	[configs, selectedConfigId],

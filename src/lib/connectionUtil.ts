@@ -10,7 +10,7 @@ const updateAddress = () => {
 	// todo: separate connecting from instantiating classes
 	const config = connectors[mode]?.getCompleteConfig() || null;
 
-	return connectionAddress.set((config?.host || "") + ("port" in config ? `:${config?.port}` : ""));
+	return connectionAddress.set((config?.host.slice(0, 15) || "") + ("port" in config ? `:${config?.port}` : ""));
 };
 export const connectionAddress = writable<string | null>(null);
 

@@ -18,6 +18,7 @@ export abstract class BaseConnection {
 	}
 
 	onFire(scene: Scene): void {
+		const start = performance.now();
 		if (scene?.mics) {
 			const overrides = get(channelOverrides);
 
@@ -68,10 +69,13 @@ export abstract class BaseConnection {
 						}
 					}
 				});
+				this._flush();
 			}
 
 			if (overrideToast) makeToast("overrides active", overrideToast, "info");
 		}
+		const end = performance.now();
+		console.log(`fire took ${end - start} ms`);
 	}
 
 	/**
@@ -88,6 +92,9 @@ export abstract class BaseConnection {
 	protected _fireDCA(channel: number, dca: number, include: boolean): void {
 		console.warn("DCAs not implemented");
 	}
+
+	/** for connections that pool data, ensures any queued data is sent */
+	protected _flush(): void {}
 
 	tools: Record<string, () => void | Promise<any>> = {};
 

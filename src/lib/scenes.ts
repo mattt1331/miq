@@ -77,7 +77,7 @@ export function regenerateScenes(selectedConfig: Config) {
 					break;
 
 				default:
-					makeToast("invalid config", `column ${i}: ${configMode}`, "warn");
+					makeToast("invalid miq flag", `column ${i}: ${configMode}`, "warn");
 			}
 
 			let mics: Scene["mics"] = new Map();

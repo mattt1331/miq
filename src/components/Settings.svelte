@@ -97,10 +97,20 @@
 				<p>
 					Connect to the M7CL over MIDI, and configure it to receive NRPN control change and parameter change commands.
 				</p>
+				<p>
+					Warning: Sending MIDI messages is synchronous and can cause performance issues. On Windows Chromium browsers,
+					enable <code>chrome://flags#use-winrt-midi-api</code> to use the modern, non-blocking MIDI API.
+				</p>
 				<fieldset class="verti" disabled={$currentConnectionStatus.status > 0 || null}>
-					<p>Default Output ID: <input type="text" bind:value={$m7clConfig.host} /></p>
-					<p>Default Input ID: <input type="text" bind:value={$m7clConfig.inputHost} /></p>
-					<p>Enable Live Metering?: <input type="checkbox" bind:checked={$m7clConfig.liveMetersEnabled} /></p>
+					<p>
+						Default Output ID: <input type="text" bind:value={$m7clConfig.host} />
+					</p>
+					<p>
+						Default Input ID: <input type="text" bind:value={$m7clConfig.inputHost} />
+					</p>
+					<p>
+						Enable Live Metering?: <input type="checkbox" bind:checked={$m7clConfig.liveMetersEnabled} />
+					</p>
 					<p>
 						Metering Point: <select bind:value={$m7clConfig.liveMeterPoint}>
 							{#each Object.entries(M7CLConnection.MeterPointEnum) as [key, value]}
@@ -117,6 +127,17 @@
 					<button class="yellow" onclick={() => $currentConnection?.close()}>Connecting (tap to stop)</button>
 				{:else}
 					<button class="red" onclick={newConnection}>Disconnected (tap to connect)</button>
+				{/if}
+
+				{#if $connectionMode == "m7cl"}
+					<button
+						disabled={$currentConnectionStatus.status == 0}
+						onclick={() => {
+							let addresses = $currentConnection instanceof M7CLConnection ? $currentConnection?.getAddresses() : null;
+							if (addresses?.output) $m7clConfig.host = addresses.output;
+							if (addresses?.input) $m7clConfig.inputHost = addresses.input;
+						}}>Use Active I/O as Default</button
+					>
 				{/if}
 			</p>
 		</div>

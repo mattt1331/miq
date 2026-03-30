@@ -51,7 +51,7 @@ export class M7CLConnection extends BaseConnection {
 
 				currentConnectionStatus.set({
 					status: ConnectionStatusEnum.CONNECTED,
-					address: this.output.id + (this.input ? `/${this.input.id}` : ""),
+					address: this.output.id.slice(0, 10) + (this.input ? `/${this.input.id.slice(0, 10)}` : ""),
 				});
 
 				(window as any).output = this.output; // for debugging
@@ -63,6 +63,13 @@ export class M7CLConnection extends BaseConnection {
 		);
 	}
 
+	public getAddresses() {
+		return {
+			output: this.output?.id,
+			input: this.input?.id,
+		};
+	}
+
 	private _chooseDevice<T extends MIDIOutput | MIDIInput>(map: ReadonlyMap<string, T>, defaultHost: string): T | null {
 		let device = map.get(defaultHost);
 
@@ -70,7 +77,7 @@ export class M7CLConnection extends BaseConnection {
 			chosen: {
 				for (let d of map.values()) {
 					let name = `${d.type} '${d.id}' (name: ${d.name}, manufacturer: ${d.manufacturer}, version: ${d.version})`;
-					console.log(name);
+					console.log(d, name);
 
 					// todo: better implement picker
 					if (map.size == 1 || confirm(`Use ${name}?`)) {
@@ -149,8 +156,7 @@ export class M7CLConnection extends BaseConnection {
 				nameBytes[3] & 0x7f,
 
 				0xf7,
-			]);
-			this.output.send([
+
 				0xf0, // system exclusive
 				0x43, // manufacturer id
 				0x10, // paramater change, midi channel 0
@@ -176,10 +182,14 @@ export class M7CLConnection extends BaseConnection {
 		}
 	}
 
+	// for bulk sending of sysex messages, write to a queue before flushing to the board
+	// todo: auto flush when full?
+	private midiQueue: number[] = [];
+
 	protected _fireDCA(channel: number, dca: number, include: boolean): void {
 		if (!this.output) return;
 
-		this.output.send([
+		this.midiQueue.push(
 			0xf0, // system exclusive
 			0x43, // manufacturer id
 			0x10, // paramater change, midi channel 0
@@ -199,14 +209,21 @@ export class M7CLConnection extends BaseConnection {
 			0x00,
 			include ? 0x01 : 0x00,
 
-			0xf7,
-		]);
+			0xf7
+		);
+	}
+
+	protected _flush(): void {
+		console.log(`sending ${this.midiQueue.length} messages`);
+		this.output?.send(this.midiQueue);
+		this.midiQueue.length = 0; // purge queue
 	}
 
 	private _onstatechange(event: MIDIConnectionEvent): void {
 		const { port } = event;
 		if (port && port.state === "disconnected") {
 			makeToast(`MIDI ${port.type} disconnected`, "", "error");
+			this.midiQueue.length = 0; // purge queue
 			// if (port.type === "output") this.close(true);
 			// this._onSocketClose();
 		}
@@ -290,6 +307,7 @@ export class M7CLConnection extends BaseConnection {
 		this.output?.close();
 		this.input?.removeEventListener("midimessage", this._onmidimessage);
 		this.input?.close();
+		this.midiQueue.length = 0; // purge queue
 		if (this.liveRequestInterval) {
 			clearInterval(this.liveRequestInterval);
 		}
