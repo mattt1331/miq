@@ -4,7 +4,8 @@
 
 ## Creating Cues
 
-Cues are programmed for `miq` in a spreadsheet. In this example, we'll work in a Google Sheet( but feel free to follow along in a file beacuse we toootally support that).
+Cues are programmed for `miq` in a spreadsheet. In this example, we'll work in a Google Sheet.
+<!-- but feel free to follow along in a file beacuse we toootally support that TODO-->
 
 Let's start by copying the template liked [here](https://www.youtube.com/watch?v=dQw4w9WgXcQ). It should look something like this:
 
@@ -20,18 +21,29 @@ At the top of each column (but below the title{? TODO}) goes a keyword, which te
 
 ![template w/ actors and MIC column](TODO)
 
-Now, the show is getting underway and we need some DCAs to control levels. Our next cue will assign actors to DCAs. {here is how}
+Now, the show is getting underway and we need some DCAs to control levels. Our next cue will assign actors to DCAs. This works a lot like assigning channels with `MIC`. However, the keyword here is `DCA`. Actors will be assigned to the DCA listed in their row. If an actor is assigned to a DCA, they will be unmuted. Otherwise, they will be muted. Let's fill in DCAs for our cue.
+<!-- TODO: can we name dcas? otherwise we don't have character names anywhere. also might be good to be able to name individual characters. discuss? -->
 
 ![template w/ prev and dcas](TODO)
 
-When this cue is fired, `miq` will {describe behavior}
+Note that `miq` won't touch channels higher than the highest channel you assign with `MIC`. This means, for instance, that if you have your pit after your actors `miq` won't do anything silly like muting them for not being assigned to a DCA.
 
-This is enough to start mixing with `miq`. If you want, you can skip to [connecting to the board](https://www.youtube.com/watch?v=dQw4w9WgXcQ), or read on for how to control other parameters using `miq`.
+This is enough to start mixing with `miq`. If you want, you can skip to [connecting to the board](#setting-up-for-the-show), or read on for how to control other parameters.
 
-- make more dcas and pan
+`miq` can also control channel parameters like pan and bus sends. This involves three different keywords: `SET`, `TEMP`, and `REVERT`.
+
+`SET`, aka `SET_AND_DEFAULT`, is used to set a channel parameter and make that the default value for that parameter.
+
+`TEMP`, aka `TEMP_SET`, is used to temporarily override the value set by `SET` for a parameter.
+
+`REVERT`, aka `REVERT_TEMP`, is used to revert a parameter back to the default (set using `SET`) after it has been modified by `TEMP`.
+
+Certain parameters come with sensible default values that do not need to be `SET`. For instance, pan's default is center.
+
+![example image](TODO)
 
 ## Setting Up for the Show
 
 - import into miq
 - connect to board
-- ~suffer~ enjoy
+- ~~suffer~~ enjoy
