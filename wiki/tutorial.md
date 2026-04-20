@@ -45,8 +45,13 @@ Certain parameters come with sensible default values that do not need to be `SET
 ## Setting Up for the Show
 
 Step 1: Add your cues to `miq`
-    Database -> Add New -> Fill in info
+
+Database -> Add New -> Fill in info
+
 Step 2: Connect to the board
-    Settings -> Mixer Connection -> Select your board in "Connection mode" dropdown and set up as indicated
+
+Settings -> Mixer Connection -> Select your board in "Connection mode" dropdown and set up as indicated
+
 Setp 3:
-    Enjoy
+
+Enjoy
