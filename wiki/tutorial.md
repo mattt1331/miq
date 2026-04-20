@@ -5,7 +5,7 @@
 ## Creating Cues
 
 Cues are programmed for `miq` in a spreadsheet. In this example, we'll work in a Google Sheet.
-<!-- but feel free to follow along in a file beacuse we toootally support that TODO-->
+<!-- but feel free to follow along in a file beacuse we totally support that TODO-->
 
 Let's start by copying the template liked [here](https://www.youtube.com/watch?v=dQw4w9WgXcQ). It should look something like this:
 
@@ -44,6 +44,9 @@ Certain parameters come with sensible default values that do not need to be `SET
 
 ## Setting Up for the Show
 
-- import into miq
-- connect to board
-- ~~suffer~~ enjoy
+Step 1: Add your cues to `miq`
+    Database -> Add New -> Fill in info
+Step 2: Connect to the board
+    Settings -> Mixer Connection -> Select your board in "Connection mode" dropdown and set up as indicated
+Setp 3:
+    Enjoy
